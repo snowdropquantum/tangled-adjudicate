@@ -30,10 +30,10 @@ def get_zephyr_subgrid(A, rows, cols, gridsize=4):
     """
 
     coords = [dnx.zephyr_coordinates(gridsize).linear_to_zephyr(v) for v in A.nodes]
-    c = np.asarray(coords)
+    # c = np.asarray(coords)
     used_coords = [c for c in coords if
-                   (c[0] == 0 and c[4] in cols and c[1] >= 2*min(rows) and c[1] <= 2*max(rows)+2) or
-                   (c[0] == 1 and c[4] in rows and c[1] >= 2*min(cols) and c[1] <= 2*max(cols)+2)]
+                   (c[0] == 0 and c[4] in cols and 2 * min(rows) <= c[1] <= 2 * max(rows) + 2) or
+                   (c[0] == 1 and c[4] in rows and 2 * min(cols) <= c[1] <= 2 * max(cols) + 2)]
     # (u, w, k, z) -> (u, w, k / 2, k % 2, z)
 
     subgraph = A.subgraph([dnx.zephyr_coordinates(gridsize).zephyr_to_linear(c)
@@ -51,37 +51,36 @@ def get_independent_embeddings(embs):
     Returns:
         List[dict]: a list of embeddings (dict)
     """
-    start = time.process_time()
 
-    Gemb = nx.Graph()
-    Gemb.add_nodes_from(range(len(embs)))
+    g_emb = nx.Graph()
+    g_emb.add_nodes_from(range(len(embs)))
     for i, emb1 in enumerate(embs):
         V1 = set(emb1.values())
         for j in range(i + 1, len(embs)):
             emb2 = embs[j]
             V2 = set(emb2.values())
             if not V1.isdisjoint(V2):
-                Gemb.add_edge(i, j)
-    print(f'Built graph.  Took {time.process_time()-start} seconds')
+                g_emb.add_edge(i, j)
+
     start = time.process_time()
 
-    Sbest = None
+    s_best = None
     max_size = 0
     for i in range(100000):
-        if len(Gemb) > 0:
-            S = nx.maximal_independent_set(Gemb)
+        if len(g_emb) > 0:
+            S = nx.maximal_independent_set(g_emb)
         else:
             return []
         if len(S) > max_size:
-            Sbest = S
+            s_best = S
             max_size = len(S)
 
     print(f'Built 100,000 greedy MIS.  Took {time.process_time()-start} seconds')
-    print(f'Found {len(Sbest)} disjoint embeddings.')
-    return [embs[x] for x in Sbest]
+    print(f'Found {len(s_best)} disjoint embeddings.')
+    return [embs[x] for x in s_best]
 
 
-def search_for_subgraphs_in_subgrid(B, subgraph, timeout=20, max_number_of_embeddings=np.inf, verbose=True):
+def search_for_subgraphs_in_subgrid(B, subgraph, timeout=20, max_number_of_embeddings=np.inf, verbose=False):
     """Find a list of subgraph (embeddings) in a subgrid.
 
     Args:
@@ -111,7 +110,7 @@ def search_for_subgraphs_in_subgrid(B, subgraph, timeout=20, max_number_of_embed
 
 
 def raster_embedding_search(hardware_graph, subgraph, raster_breadth=2, delete_used=True,
-                            verbose=True, gridsize=6, verify_embeddings=False, **kwargs):
+                            verbose=False, gridsize=6, verify_embeddings=False, **kwargs):
     """Returns a matrix (n, L) of subgraph embeddings to hardware_graph.
 
     Args:
@@ -165,42 +164,73 @@ def raster_embedding_search(hardware_graph, subgraph, raster_breadth=2, delete_u
     return embmat
 
 
+def load_embeddings_dictionary(file_name):
+
+    with open(os.path.join(os.getcwd(), '..', 'data', file_name), "rb") as fp:
+        dictionary_of_embeddings = pickle.load(fp)
+
+    return dictionary_of_embeddings
+
+
 def main():
-
-    # first, choose a hardware graph, or more generally the target graph for the embedding
-    target_graph = DWaveSampler(solver='Advantage2_prototype2.4').to_networkx_graph()
-
-    # next, define source graph
-    graph = GraphProperties(graph_number=3)
-    source_graph = nx.Graph()
-    source_graph.add_nodes_from([k for k in range(graph.vertex_count)])
-    source_graph.add_edges_from(graph.edge_list)
-
-    # state = [0, 0, 1, 2, 3, 2, 1, 3, 2, 1]
-    # edge_state_map = {1: 0, 2: -1, 3: 1}    # maps edge state to J value 1 => J = 0; 2 => J = -1 FM; 3 => J = +1 AFM
+    # generates embeddings into hardware for graphs 1 through 10; default settings take about 10 minutes total to run
     #
-    # edge_vals = state[graph.vertex_count:]
-    #
-    # j_vals = [edge_state_map[k] for k in edge_vals]
+    # the dictionary_of_embeddings object looks like
+    # dictionary_of_embeddings = {1: [[1094, 1100], [609, 1019] , ... ], 2: [[1093, 1098, 136], [558, 725, 731], ... ]}
+    # number found for raster_breadth = 2 and grid_size = 6 : 578, 346, 219, 167, 86, 48, 58, 32, 16, 8
 
-    # bqm = dimod.BinaryQuadraticModel(vartype='SPIN')
+    raster_breadth = 2   # these parameters seem to work well to get a lot of embeddings
+    grid_size = 6
 
-    # cnt = 0
-    # for each in graph.edge_list:
-    #     bqm.add_quadratic(each[0], each[1], 1)
-    #     cnt += 1
-    #
-    # source_graph = dimod.to_networkx_graph(bqm)
+    generate_embeddings_file = False  # if True generates the embeddings in /data directory, else attempts to load it
+    embeddings_file_name = ('embeddings_dictionary_graphs_1_through_10_raster_breadth_'
+                            + str(raster_breadth) + '_gridsize_' + str(grid_size) + '.pkl')   # name of data file
 
-    embmat = raster_embedding_search(target_graph, source_graph)
+    # checks to see if /data exists; if it doesn't it creates it; if it does, it writes the file to disk
+    data_dir = os.path.join(os.getcwd(), '..', 'data')
 
-    with open(os.path.join(os.getcwd(), '..', 'results', 'embedding_matrix_graph_3.txt'), "wb") as fp:
-        pickle.dump(embmat, fp)
+    if not os.path.isdir(data_dir):
+        os.mkdir(data_dir)
 
-    print('')
+    initial_start = time.time()
 
-    # embmat is an ndarray of size (51, 64) where 51 is the number of embeddings found and 64 is the number of vertices
-    # in the original graph
+    if generate_embeddings_file:
+        dictionary_of_embeddings = {}
+
+        # choose a hardware graph, or more generally the target graph for the embedding
+        target_graph = DWaveSampler(solver='Advantage2_prototype2.4').to_networkx_graph()
+
+        for graph_number in range(1, 11):
+
+            # define source graph
+            graph = GraphProperties(graph_number=graph_number)
+            source_graph = nx.Graph()
+            source_graph.add_nodes_from([k for k in range(graph.vertex_count)])
+            source_graph.add_edges_from(graph.edge_list)
+
+            print('********************')
+            print('Evaluating graph #', graph_number, ', raster_breadth', raster_breadth, 'and grid_size', grid_size)
+            print('********************')
+
+            start = time.time()
+
+            embmat = raster_embedding_search(target_graph, source_graph,
+                                             raster_breadth=raster_breadth,
+                                             gridsize=grid_size)
+
+            dictionary_of_embeddings[graph_number] = [k.tolist() for k in embmat]
+            print('graph_number', graph_number, 'took', time.time() - start, 'seconds.')
+
+        with open(os.path.join(data_dir, embeddings_file_name), "wb") as fp:
+            pickle.dump(dictionary_of_embeddings, fp)
+
+    else:
+
+        dictionary_of_embeddings = load_embeddings_dictionary(file_name=embeddings_file_name)
+        print('this is the loaded dictionary:')
+        print(dictionary_of_embeddings)
+
+    print('total time was', time.time() - initial_start, 'seconds.')
 
 
 if __name__ == "__main__":
