@@ -13,10 +13,6 @@ from minorminer import subgraph as glasgow
 from utils.game_graph_properties import GraphProperties
 
 
-# todo go through this and see if I can trim it down, document it, and make it work
-# input should be game graph, output should be dictionary of embeddings
-
-
 def get_zephyr_subgrid(A, rows, cols, gridsize=4):
     """Make a subgraph of a Zephyr (Advantage2) graph on a set of rows and columns of unit cells.
 
