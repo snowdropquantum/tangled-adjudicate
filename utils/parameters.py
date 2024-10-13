@@ -12,3 +12,6 @@ class Params(object):
         # 6 = 16 vertices, 32 edges, non-planar, tesseract
         self.USE_PRECOMPUTED_RESULTS = True
         self.GET_PRECOMPUTED_RESULTS = True
+
+        self.NUM_READS = 10000
+        self.EPSILON = 0.5
