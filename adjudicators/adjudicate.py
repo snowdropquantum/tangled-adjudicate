@@ -4,6 +4,7 @@ import sys
 import time
 import numpy as np
 from utils.utilities import game_state_to_ising_model
+from schrodinger.schrodinger_functions import evolve_schrodinger
 
 
 class Adjudicator(object):
@@ -51,6 +52,35 @@ class Adjudicator(object):
                               np.eye(int(game_state['num_nodes'])))
 
         influence_vector = np.sum(correlation_matrix, axis=0)
+
+        score_difference = influence_vector[game_state['player1_node']] - influence_vector[game_state['player2_node']]
+
+        if score_difference > self.params.EPSILON:  # more positive than epsilon, red wins
+            winner = 'red'
+        else:
+            if score_difference < -self.params.EPSILON:
+                winner = 'blue'
+            else:
+                winner = 'draw'
+
+        return winner, score_difference, influence_vector
+
+    def schrodinger_equation(self, game_state):
+
+        h, jay = game_state_to_ising_model(game_state)
+
+        s_min = 0.001   # beginning and ending anneal times
+        s_max = 0.999
+
+        tf = 5  # total anneal time in nanoseconds
+
+        number_of_levels = 2 ** game_state['num_nodes']
+
+        _, correlation_matrix = (
+            evolve_schrodinger(h, jay, s_min=s_min, s_max=s_max, tf=tf, number_of_levels=number_of_levels,
+                               n_qubits=game_state['num_nodes'], verbose=False, truncate=True))
+        # what's returned here is upper triangular with zeros on the diagonal, so we need to add the transpose
+        influence_vector = np.sum(correlation_matrix + correlation_matrix.T, axis=0)
 
         score_difference = influence_vector[game_state['player1_node']] - influence_vector[game_state['player2_node']]
 
