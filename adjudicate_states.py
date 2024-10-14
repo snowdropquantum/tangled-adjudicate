@@ -38,15 +38,17 @@ def main():
 
     start = time.time()
 
-    w, score, influence = adjudicator.simulated_annealing(example_game_state)
+    results = adjudicator.simulated_annealing(example_game_state)
 
     print('elapsed time for simulated annealing was', round(time.time() - start, precision_digits), 'seconds.')
-    print('winner:', w)
-    if score is None:
-        print('score:', score)
+    print('correlation matrix:')
+    print(np.round(results['correlation_matrix'], precision_digits))
+    print('winner:', results['winner'])
+    if results['score'] is None:
+        print('score:', results['score'])
     else:
-        print('score:', round(score, precision_digits))
-    print('influence vector:', [round(influence[k], precision_digits) for k in range(len(influence))])
+        print('score:', round(results['score'], precision_digits))
+    print('influence vector:', [round(results['influence_vector'][k], precision_digits) for k in range(len(results['influence_vector']))])
     print()
     #########################################################################
 
@@ -55,15 +57,17 @@ def main():
 
     start = time.time()
 
-    w, score, influence = adjudicator.schrodinger_equation(example_game_state)
+    results = adjudicator.schrodinger_equation(example_game_state)
 
     print('elapsed time for schrodinger equation was', round(time.time() - start, precision_digits), 'seconds.')
-    print('winner:', w)
-    if score is None:
-        print('score:', score)
+    print('correlation matrix:')
+    print(np.round(results['correlation_matrix'], precision_digits))
+    print('winner:', results['winner'])
+    if results['score'] is None:
+        print('score:', results['score'])
     else:
-        print('score:', round(score, precision_digits))
-    print('influence vector:', [round(influence[k], precision_digits) for k in range(len(influence))])
+        print('score:', round(results['score'], precision_digits))
+    print('influence vector:', [round(results['influence_vector'][k], precision_digits) for k in range(len(results['influence_vector']))])
     print()
     #########################################################################
 
@@ -72,15 +76,17 @@ def main():
 
     start = time.time()
 
-    w, score, influence = adjudicator.quantum_annealing(example_game_state)
+    results = adjudicator.quantum_annealing(example_game_state)
 
     print('elapsed time for quantum annealing was', round(time.time() - start, precision_digits), 'seconds.')
-    print('winner:', w)
-    if score is None:
-        print('score:', score)
+    print('correlation matrix:')
+    print(np.round(results['correlation_matrix'], precision_digits))
+    print('winner:', results['winner'])
+    if results['score'] is None:
+        print('score:', results['score'])
     else:
-        print('score:', round(score, precision_digits))
-    print('influence vector:', [round(influence[k], precision_digits) for k in range(len(influence))])
+        print('score:', round(results['score'], precision_digits))
+    print('influence vector:', [round(results['influence_vector'][k], precision_digits) for k in range(len(results['influence_vector']))])
     print()
     #########################################################################
 

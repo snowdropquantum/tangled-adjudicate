@@ -13,7 +13,7 @@ from dwave.system.testing import MockDWaveSampler
 from dwave.preprocessing.composites import SpinReversalTransformComposite
 
 
-# todo handle non-terminal vs terminal states
+# todo change output to match readme
 
 class Adjudicator(object):
     def __init__(self, params):
@@ -110,7 +110,13 @@ class Adjudicator(object):
         correlation_matrix = (np.einsum('si,sj->ij', samps, samps) / self.params.NUM_READS_SA -
                               np.eye(int(game_state['num_nodes'])))
 
-        return self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix)
+        winner, score_difference, influence_vector = self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix)
+
+        return_dictionary = {'game_state': game_state, 'adjudicator': 'simulated_annealing',
+                             'winner': winner, 'score': score_difference, 'influence_vector': influence_vector,
+                             'correlation_matrix': correlation_matrix, 'parameters': self.params}
+
+        return return_dictionary
 
     def schrodinger_equation(self, game_state):
 
@@ -128,7 +134,13 @@ class Adjudicator(object):
         # what's returned here is upper triangular with zeros on the diagonal, so we need to add the transpose
         correlation_matrix = correlation_matrix + correlation_matrix.T
 
-        return self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix)
+        winner, score_difference, influence_vector = self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix)
+
+        return_dictionary = {'game_state': game_state, 'adjudicator': 'schrodinger_equation',
+                             'winner': winner, 'score': score_difference, 'influence_vector': influence_vector,
+                             'correlation_matrix': correlation_matrix, 'parameters': self.params}
+
+        return return_dictionary
 
     def quantum_annealing(self, game_state):
 
@@ -220,4 +232,10 @@ class Adjudicator(object):
             (np.einsum('si,sj->ij', samps, samps) / sample_count -
              np.eye(int(game_state['num_nodes'])))
 
-        return self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix)
+        winner, score_difference, influence_vector = self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix)
+
+        return_dictionary = {'game_state': game_state, 'adjudicator': 'quantum_annealing',
+                             'winner': winner, 'score': score_difference, 'influence_vector': influence_vector,
+                             'correlation_matrix': correlation_matrix, 'parameters': self.params}
+
+        return return_dictionary
