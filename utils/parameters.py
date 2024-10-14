@@ -14,7 +14,7 @@ class Params(object):
         self.USE_PRECOMPUTED_RESULTS = True
         self.GET_PRECOMPUTED_RESULTS = True
 
-        self.NUM_READS_SA = 2076000
+        self.NUM_READS_SA = 2076000   # 5256000 for graph 3
         self.NUM_READS_QC = 100
         self.EPSILON = 0.5
         self.ANNEAL_TIME_IN_NS = 5
