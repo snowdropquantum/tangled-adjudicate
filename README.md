@@ -53,9 +53,10 @@ edge in your graph.
 
 Adjudicators output a dictionary with the following keys:
 
-* 'input_state': a copy of the input dictionary
+* 'game_state': a copy of the input game_state dictionary
 * 'adjudicator': a string, one of 'simulated_annealing', 'quantum_annealing', 'schrodinger_equation'
-* 'influence_vector': a vector of real numbers of length vertex_count (one real number per vertex in the game graph)
-* 'state_adjudication_result': a string, one of 'red', 'blue', 'draw', 'not_terminal'
+* 'winner': if both players have chosen vertices, a string, one of 'red', 'blue', 'draw', otherwise None
 * 'score': if both players have chosen vertices, the difference in their influence scores as a real number, otherwise None
+* 'influence_vector': a vector of real numbers of length vertex_count (one real number per vertex in the game graph)
+* 'correlation_matrix': symmetric real-valued matrix of spin-spin correlations with zeros on diagonals
 * 'parameters': a copy of the parameters dictionary

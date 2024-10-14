@@ -13,8 +13,6 @@ from dwave.system.testing import MockDWaveSampler
 from dwave.preprocessing.composites import SpinReversalTransformComposite
 
 
-# todo change output to match readme
-
 class Adjudicator(object):
     def __init__(self, params):
         self.params = params
