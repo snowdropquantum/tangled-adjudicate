@@ -122,7 +122,7 @@ def write_unique_states_to_disk():
         game_states[str(each)]['game_state'] = convert_state_string_to_game_state(graph, each)
         game_states[str(each)]['automorphisms'] = good_states[str(each)]
 
-    with open(os.path.join(data_dir, file_name_prefix + "_unique_terminal_states.txt"), "wb") as fp:
+    with open(os.path.join(data_dir, file_name_prefix + "_unique_terminal_states.pkl"), "wb") as fp:
         pickle.dump(game_states, fp)
 
 
