@@ -1,4 +1,4 @@
-""" evaluation of Tangled terminal states """
+""" how to use provided solvers to adjudicate Tangled terminal states """
 
 import sys
 import os
