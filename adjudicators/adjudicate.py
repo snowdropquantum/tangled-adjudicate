@@ -144,16 +144,11 @@ class Adjudicator(object):
 
         h, jay = game_state_to_ising_model(game_state)
 
-        # define P to be the number of automorphisms of the game graph, len(self.automorphisms)
-        # define U to be the number of source to target embeddings found, len(self.embeddings)
-        # define M to be the number of spin reversal transformations used, self.params.SPIN_REVERSAL_TRANSFORMS
-        # define N to be self.params.NUM_READS
-        # for graph_number 2 ==> P, U, M, N are 6 346 50 1000; P*U*M*N == 103,800,000 samples
-        # for the time being, let's keep N to be the number of samples drawn per call to the chip; this returns
-        # a total of P*U*M*N samples
-
-        print('P, U, M, N are', len(self.automorphisms), len(self.embeddings), self.params.SPIN_REVERSAL_TRANSFORMS,
-              self.params.NUM_READS_QC)
+        # number of automorphisms of the game graph: len(self.automorphisms)
+        # number of source to target embeddings found: len(self.embeddings)
+        # number of spin reversal transformations used: self.params.SPIN_REVERSAL_TRANSFORMS
+        # number of samples taken per call to the processor: self.params.NUM_READS
+        # for graph_number 2 ==> these are 6, 346, 10, 100 respectively ==> 2,076,000 samples
 
         # self.embeddings[0] = [1093, 1098, 136]
         num_var = len(self.embeddings[0])  # e.g. 3
@@ -223,7 +218,6 @@ class Adjudicator(object):
         samps = np.delete(samps, (0), axis=0)   # delete first row of zeros
 
         sample_count = self.params.NUM_READS_QC * self.params.SPIN_REVERSAL_TRANSFORMS * number_of_embeddings_to_use_U * number_of_automorphisms_P
-        print('total samples from quantum annealing:', sample_count)
 
         # this is a full matrix with zeros on the diagonal that uses all the samples
         correlation_matrix = \
