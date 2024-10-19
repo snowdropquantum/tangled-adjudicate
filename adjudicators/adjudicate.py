@@ -10,7 +10,8 @@ from utils.utilities import game_state_to_ising_model
 from schrodinger.schrodinger_functions import evolve_schrodinger
 from dwave.system import DWaveSampler, FixedEmbeddingComposite
 from dwave.system.testing import MockDWaveSampler
-from dwave.preprocessing.composites import SpinReversalTransformComposite
+# from dwave.preprocessing.composites import SpinReversalTransformComposite
+from utils.modified_srt import SpinReversalTransformCompositeModified
 
 
 class Adjudicator(object):
@@ -142,6 +143,9 @@ class Adjudicator(object):
 
     def quantum_annealing(self, game_state):
 
+        # todo implement two passes, where first is only one call, second is all of them
+        # todo implement self-rolled SRT function
+
         h, jay = game_state_to_ising_model(game_state)
 
         # number of automorphisms of the game graph: len(self.automorphisms)
@@ -207,7 +211,7 @@ class Adjudicator(object):
                 for j in range(num_var):  # up to 0..1037
                     embedding_to_use[num_var * k + j] = [permuted_embedding[k][j]]
 
-            composed_sampler = SpinReversalTransformComposite(
+            composed_sampler = SpinReversalTransformCompositeModified(
                 FixedEmbeddingComposite(sampler, embedding=embedding_to_use))
 
             ss = composed_sampler.sample_ising(**sampler_kwargs)
