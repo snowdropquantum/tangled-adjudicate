@@ -4,10 +4,12 @@ import sys
 import os
 import time
 import pickle
+import ast
 import numpy as np
 from adjudicators.adjudicate import Adjudicator
-from utils.generate_terminal_states import write_unique_states_to_disk
+from utils.generate_terminal_states import write_unique_states_to_disk, convert_state_string_to_game_state
 from utils.parameters import Params
+from utils.game_graph_properties import GraphProperties
 
 
 def main():
@@ -22,20 +24,28 @@ def main():
     np.set_printoptions(suppress=True)   # remove scientific notation
 
     params = Params()
+    graph = GraphProperties(params.GRAPH_NUMBER)
     adjudicator = Adjudicator(params)
 
     file_name_prefix = "graph_" + str(params.GRAPH_NUMBER)
 
     data_dir = os.path.join(os.getcwd(), 'data')
 
-    my_file = os.path.join(data_dir, file_name_prefix + "_unique_terminal_states_adjudication_results.pkl")
+    my_file = os.path.join(data_dir, file_name_prefix + "_unique_terminal_states_adjudication_results_just_qa_just_problems.pkl")
 
     if os.path.isfile(my_file):
         with open(my_file, "rb") as fp:
             results = pickle.load(fp)
     else:
-        with open(os.path.join(data_dir, file_name_prefix + '_unique_terminal_states.pkl'), "rb") as fp:
-            game_states = pickle.load(fp)
+        data_dir = os.path.join(os.getcwd(), 'data')
+        with open(os.path.join(data_dir, 'disagree_keys.pkl'), "rb") as fp:
+            disagree_keys = pickle.load(fp)
+        game_states = {}
+        for each in disagree_keys:
+            game_states[each] = convert_state_string_to_game_state(graph, ast.literal_eval(each))
+
+        # with open(os.path.join(data_dir, file_name_prefix + '_unique_terminal_states.pkl'), "rb") as fp:
+        #     game_states = pickle.load(fp)
 
         results = {}
 
@@ -45,22 +55,23 @@ def main():
             results[k]['schrodinger_equation'] = []
             results[k]['quantum_annealing'] = []
 
-        start = time.time()
-        for k, v in game_states.items():
-            results[k]['simulated_annealing'].append(adjudicator.simulated_annealing(v['game_state']))
-        print('elapsed time for simulated annealing was', round(time.time() - start, precision_digits), 'seconds.')
+        # start = time.time()
+        # for k, v in game_states.items():
+        #     results[k]['simulated_annealing'].append(adjudicator.simulated_annealing(v['game_state']))
+        # print('elapsed time for simulated annealing was', round(time.time() - start, precision_digits), 'seconds.')
+        #
+        # start = time.time()
+        # for k, v in game_states.items():
+        #     results[k]['schrodinger_equation'].append(adjudicator.schrodinger_equation(v['game_state']))
+        # print('elapsed time for schrodinger equation was', round(time.time() - start, precision_digits), 'seconds.')
 
         start = time.time()
         for k, v in game_states.items():
-            results[k]['schrodinger_equation'].append(adjudicator.schrodinger_equation(v['game_state']))
-        print('elapsed time for schrodinger equation was', round(time.time() - start, precision_digits), 'seconds.')
-
-        start = time.time()
-        for k, v in game_states.items():
-            results[k]['quantum_annealing'].append(adjudicator.quantum_annealing(v['game_state']))
+            # results[k]['quantum_annealing'].append(adjudicator.quantum_annealing(v['game_state']))
+            results[k]['quantum_annealing'].append(adjudicator.quantum_annealing(v))
         print('elapsed time for quantum annealing was', round(time.time() - start, precision_digits), 'seconds.')
 
-        with open(os.path.join(data_dir, file_name_prefix + "_unique_terminal_states_adjudication_results.pkl"), "wb") as fp:
+        with open(os.path.join(data_dir, file_name_prefix + "_unique_terminal_states_adjudication_results_just_qa_just_problems.pkl"), "wb") as fp:
             pickle.dump(results, fp)
 
     print()
