@@ -15,6 +15,11 @@ We provide three different adjudicators:
 In addition to the basic adjudicators, we provide several utility functions that support the adjudication process.
 This allows the tangled-adjudicate repo to support investigation more general than only adjudicating Tangled games.
 
+## Setup
+
+Python 3.9,
+
+## Next Category
 In particular for the Quantum Annealing solver, there are several non-obvious steps that we document here.
 
 ## Tangled Game Graph Specification
