@@ -12,6 +12,7 @@ from utils.game_graph_properties import GraphProperties
 from utils.parameters import Params
 
 
+
 def compare_adjudication_results(params):
 
     solvers =['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
