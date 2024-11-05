@@ -1,7 +1,6 @@
 import time
 import os
 import pickle
-import dimod
 import dwave_networkx as dnx
 import networkx as nx
 import numpy as np

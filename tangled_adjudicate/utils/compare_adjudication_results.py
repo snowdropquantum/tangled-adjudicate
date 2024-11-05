@@ -3,11 +3,7 @@ adjudicate_all_terminal_states.py """
 import sys
 import os
 import pickle
-import ast
-import numpy as np
-from operator import itemgetter
 import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 from utils.game_graph_properties import GraphProperties
 from utils.parameters import Params
 

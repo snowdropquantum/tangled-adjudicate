@@ -1,5 +1,4 @@
 import time
-import os
 from math import floor, sqrt, pi, inf, log2
 import numpy as np
 from scipy.linalg import expm

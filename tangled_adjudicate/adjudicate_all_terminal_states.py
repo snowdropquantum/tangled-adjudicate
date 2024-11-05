@@ -7,7 +7,7 @@ import pickle
 import ast
 import numpy as np
 from adjudicators.adjudicate import Adjudicator
-from utils.generate_terminal_states import write_unique_states_to_disk, convert_state_string_to_game_state
+from utils.generate_terminal_states import convert_state_string_to_game_state
 from utils.parameters import Params
 from utils.game_graph_properties import GraphProperties
 

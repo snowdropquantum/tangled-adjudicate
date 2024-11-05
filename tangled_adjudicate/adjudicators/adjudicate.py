@@ -1,9 +1,7 @@
 """ evaluation of Tangled terminal states using simulated annealing """
 import neal
-import sys
 import os
 import pickle
-import time
 import dimod
 import numpy as np
 from utils.utilities import game_state_to_ising_model

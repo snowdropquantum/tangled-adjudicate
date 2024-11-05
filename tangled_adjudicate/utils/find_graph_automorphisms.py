@@ -17,7 +17,6 @@ import time
 import pickle
 import networkx as nx
 from utils.game_graph_properties import GraphProperties
-from utils.parameters import Params
 
 
 def automorphisms(graph):
