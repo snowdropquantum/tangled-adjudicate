@@ -10,7 +10,8 @@ We provide three different adjudicators:
 
 1. A Schrödinger Equation solver, which is only useful for tiny game graphs
 2. A Simulated Annealing solver, whose parameters are chosen to mimic D-Wave hardware, and 
-3. A Quantum Annealing solver that uses D-Wave hardware
+3. A Quantum Annealing solver that uses D-Wave hardware using my attempt to implement the process used to generate the 
+calibration refinement process described [here](file:///C:/Users/geord/Downloads/fcomp-05-1238988.pdf).
 
 In addition to the basic adjudicators, we provide several utility functions that support the adjudication process.
 This allows the tangled-adjudicate repo to support investigation more general than only adjudicating Tangled games.
