@@ -1,15 +1,14 @@
-""" evaluation of Tangled terminal states using simulated annealing """
+""" Adjudicator class for Tangled game states using Schrödinger Equation, Simulated Annealing, and D-Wave hardware """
 import neal
 import os
 import pickle
 import dimod
 import numpy as np
-from utils.utilities import game_state_to_ising_model
-from schrodinger.schrodinger_functions import evolve_schrodinger
+from tangled_adjudicate.utils.utilities import game_state_to_ising_model
+from tangled_adjudicate.schrodinger.schrodinger_functions import evolve_schrodinger
 from dwave.system import DWaveSampler, FixedEmbeddingComposite
 from dwave.system.testing import MockDWaveSampler
-# from dwave.preprocessing.composites import SpinReversalTransformComposite
-from utils.modified_srt import SpinReversalTransformCompositeModified
+from dwave.preprocessing.composites import SpinReversalTransformComposite
 
 
 class Adjudicator(object):
@@ -46,7 +45,8 @@ class Adjudicator(object):
 
         return winner, score_difference, influence_vector
 
-    def game_state_is_terminal(self, game_state):
+    @staticmethod
+    def game_state_is_terminal(game_state):
         # a state is terminal if both players have chosen vertices and all edges have been played
         # game_state = {'num_nodes': 6, 'edges': [(0, 1, 1), (0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 2), (1, 2, 1),
         # (1, 3, 2), (1, 4, 3), (1, 5, 3), (2, 3, 1), (2, 4, 2), (2, 5, 3), (3, 4, 2), (3, 5, 1), (4, 5, 2)],
@@ -60,7 +60,8 @@ class Adjudicator(object):
         else:
             return False
 
-    def ss_to_samps(self, ss, num_var, number_of_embeddings_to_use):
+    @staticmethod
+    def ss_to_samps(ss, num_var, number_of_embeddings_to_use):
         all_samples = ss.record.sample[:, range(num_var)]
         for k in range(1, number_of_embeddings_to_use):
             all_samples = np.vstack((all_samples, ss.record.sample[:, range(num_var * k, num_var * (k + 1))]))
@@ -107,7 +108,8 @@ class Adjudicator(object):
         correlation_matrix = (np.einsum('si,sj->ij', samps, samps) / self.params.NUM_READS_SA -
                               np.eye(int(game_state['num_nodes'])))
 
-        winner, score_difference, influence_vector = self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix)
+        winner, score_difference, influence_vector = (
+            self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix))
 
         return_dictionary = {'game_state': game_state, 'adjudicator': 'simulated_annealing',
                              'winner': winner, 'score': score_difference, 'influence_vector': influence_vector,
@@ -122,16 +124,14 @@ class Adjudicator(object):
         s_min = 0.001   # beginning and ending anneal times
         s_max = 0.999
 
-        number_of_levels = 2 ** game_state['num_nodes']
-
-        _, correlation_matrix = (
+        correlation_matrix = (
             evolve_schrodinger(h, jay, s_min=s_min, s_max=s_max, tf=self.params.ANNEAL_TIME_IN_NS,
-                               number_of_levels=number_of_levels, n_qubits=game_state['num_nodes'], verbose=False,
-                               truncate=True))
+                               n_qubits=game_state['num_nodes']))
         # what's returned here is upper triangular with zeros on the diagonal, so we need to add the transpose
         correlation_matrix = correlation_matrix + correlation_matrix.T
 
-        winner, score_difference, influence_vector = self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix)
+        winner, score_difference, influence_vector = (
+            self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix))
 
         return_dictionary = {'game_state': game_state, 'adjudicator': 'schrodinger_equation',
                              'winner': winner, 'score': score_difference, 'influence_vector': influence_vector,
@@ -141,8 +141,7 @@ class Adjudicator(object):
 
     def quantum_annealing(self, game_state):
 
-        # todo implement two passes, where first is only one call, second is all of them
-        # todo implement self-rolled SRT function
+        # todo implement procedure described in calibration paper
 
         h, jay = game_state_to_ising_model(game_state)
 
@@ -209,8 +208,8 @@ class Adjudicator(object):
                 for j in range(num_var):  # up to 0..1037
                     embedding_to_use[num_var * k + j] = [permuted_embedding[k][j]]
 
-            composed_sampler = SpinReversalTransformCompositeModified(
-                FixedEmbeddingComposite(sampler, embedding=embedding_to_use))
+            composed_sampler = (
+                SpinReversalTransformComposite(FixedEmbeddingComposite(sampler, embedding=embedding_to_use)))
 
             ss = composed_sampler.sample_ising(**sampler_kwargs)
             ss = dimod.SampleSet.from_samples_bqm(ss, bqm)

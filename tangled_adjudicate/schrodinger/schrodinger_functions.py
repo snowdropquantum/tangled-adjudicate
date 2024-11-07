@@ -20,17 +20,15 @@ def initialize_wavefunction(eigenvalues, eigenvectors, n_i, gap_initial):
     return psi
 
 
-def evolve_wavefunction(eigenvalues, eigenvectors, psi, big_h, tf, s_step, number_of_levels, truncate):
-    if truncate:
-        cn = np.squeeze(eigenvectors.conj().T.dot(psi))                         # complex ndarray (number_of_levels, 1)
-        cn = np.multiply(cn, np.exp(-1j * eigenvalues * tf * s_step * 2 * pi))  # elementwise multiply => another vector
-        psi = np.zeros((eigenvectors.shape[0], 1))
-        for k in range(number_of_levels):
-            row_vector = cn[k] * eigenvectors[:, k]
-            column_vector = row_vector[:, np.newaxis]
-            psi = psi + column_vector
-    else:
-        psi = expm(-1j * big_h.toarray() * tf * s_step * 2 * pi).dot(psi)                 # complex ndarray (2**n_qubits, 1)
+def evolve_wavefunction(eigenvalues, eigenvectors, psi, tf, s_step, number_of_levels):
+
+    cn = np.squeeze(eigenvectors.conj().T.dot(psi))                         # complex ndarray (number_of_levels, 1)
+    cn = np.multiply(cn, np.exp(-1j * eigenvalues * tf * s_step * 2 * pi))  # elementwise multiply => another vector
+    psi = np.zeros((eigenvectors.shape[0], 1))
+    for k in range(number_of_levels):
+        row_vector = cn[k] * eigenvectors[:, k]
+        column_vector = row_vector[:, np.newaxis]
+        psi = psi + column_vector
 
     return psi     # complex ndarray (2**n_qubits, 1)
 
@@ -52,49 +50,35 @@ def calculate_correlation_matrix(sz, psi):
     return correlation_matrix
 
 
-def evolve_schrodinger(h, jay, s_min, s_max, tf, number_of_levels, n_qubits, n_i=0, verbose=False, truncate=False):
+def evolve_schrodinger(h, jay, s_min, s_max, tf, n_qubits, verbose=False):
 
-    # tf = annealing time in nanoseconds
-    # s_min = 0.1                         # Initial point, lower bound 0
-    # s_max = 0.5                         # Final point, upper bound 1
+    # tf = real annealing time in nanoseconds
+    # s_min = 0.1                           # Initial dimensionless anneal time (s=t/t_f), lower bound 0
+    # s_max = 0.5                           # Final dimensionless anneal time (s=t/t_f), upper bound 1
     # Delta and Gamma (envelope functions from schedule) are in units of GHz
     # h and J are dimensionless and in this format:
     #         h = {0: -1, 1: -1}
     #         J = {(0, 1): -1}
     #         IMPORTANT: J[n, m] has m > n
-    # number_of_levels = total number of levels to keep and plot
-    # n_i = Initial state (= 0 for ground state, 1 for 1st excited, etc.)
     # n_qubits is the number of qubits
-    # truncate : truncates the energy levels during evolve_wavefunction to number_of_levels
-    # return_full_correlation_matrix_list if True returns the correlation matrix at all s points along the anneal
-    # if False, only the last one at the end of the computation
 
-    # Options:
-    use_adaptive_stepsize = True        # adaptive steps
+    # parameters, don't touch unless you are a quantum demigod
+    n_i = 0                                 # Initial state (= 0 for ground state, 1 for 1st excited, etc.)
+    max_step = 0.0005                       # maximum step size
+    s_step = max_step                       # initial step size
+    gap_min_adaptive = 1e-9                 # Minimum allowed gap for adaptive steps
+    n_adaptive = 2                          # Number of levels to consider for adaptive steps
+    gap_initial = 0.001                     # Threshold gap for initialization in superposition
+    number_of_levels = 2 ** n_qubits        # max number, can reduce if you want
 
-    # Simulation steps:
-    max_step = 0.0005                    # maximum step size
-    s_step = max_step                   # initial step size
-
-    s_gap = None                        # will be s where minimum gap is, optional to return
-    gap_min_adaptive = 1e-9             # Minimum allowed gap for adaptive steps
-    n_adaptive = 2                      # Number of levels to consider for adaptive steps
-
-    gap_initial = 0.001                 # Threshold gap for initialization in superposition
-
-    hilbert_space_dimension = 2 ** n_qubits      # dimension of qubit Hilbert space
-    number_of_levels = min(number_of_levels, hilbert_space_dimension)
-
-    # load and return (1001,) vectors for delta and big_e
+    # load and return (1001,) vectors for delta and big_e for typical D-Wave annealing schedule; if you want to try to
+    # exactly match hardware, you will have to use specific data from whatever system you're simulating
     delta_qubit, big_e_qubit = load_schedule_data()
-
-    gap_min = inf
 
     # Identity and Pauli matrices -- sx, sy, sz are dicts with qubit # as key, should be sparse csr format
     sx, sy, sz = create_pauli_matrices_for_full_size_hamiltonian(n_qubits=n_qubits)
 
     s = s_min
-    ts = []
     energies = []
     probabilities = []
     gap_old = 0
@@ -110,13 +94,11 @@ def evolve_schrodinger(h, jay, s_min, s_max, tf, number_of_levels, n_qubits, n_i
         if verbose:
             print('computing for s = ', s)
 
-        ts.append(s)            # this is a list of s values we used
-
         # eigenenergies and wavefunctions at s
 
-        n_s = 1000 * s          # checked that s=0.3 gives n_low = 300
-        n_low = floor(n_s)      # and big_e_qubit[n_low] = 0.05022258
-        n_high = n_low + 1      # and delta_qubit[n_low] = 3.208404585
+        n_s = 1000 * s                      # checked that s=0.3 gives n_low = 300
+        n_low = floor(n_s)                  # and big_e_qubit[n_low] = 0.05022258
+        n_high = n_low + 1                  # and delta_qubit[n_low] = 3.208404585
 
         big_e_s = big_e_qubit[n_low] * (n_high - n_s) + big_e_qubit[n_high] * (n_s - n_low)
         delta = delta_qubit[n_low] * (n_high - n_s) + delta_qubit[n_high] * (n_s - n_low)
@@ -128,15 +110,14 @@ def evolve_schrodinger(h, jay, s_min, s_max, tf, number_of_levels, n_qubits, n_i
                                                                          n_qubits=n_qubits,
                                                                          use_eig=False)
 
-        energies.append(eigenvalues)     # eigenvalues is a sorted ndarray of len (2**n_qubits,)
+        energies.append(eigenvalues)        # eigenvalues is a sorted ndarray of len (2**n_qubits,)
 
-        # Initializing the wavefunction
+        # Initializing the wavefunction; psi is ndarray (2**n_qubits, 1)
         if s == s_min:
-            # psi is ndarray (2**n_qubits, 1)
             psi = initialize_wavefunction(eigenvalues, eigenvectors, n_i, gap_initial)
 
         # evolving the wavefunction; psi is ndarray (2**n_qubits, 1)
-        psi = evolve_wavefunction(eigenvalues, eigenvectors, psi, big_h, tf, s_step, number_of_levels, truncate)
+        psi = evolve_wavefunction(eigenvalues, eigenvectors, psi, tf, s_step, number_of_levels)
 
         # calculate correlation function
         correlation_matrix = calculate_correlation_matrix(sz, psi)
@@ -144,25 +125,20 @@ def evolve_schrodinger(h, jay, s_min, s_max, tf, number_of_levels, n_qubits, n_i
 
         full_prob = np.squeeze(np.square(np.abs(eigenvectors.conj().T.dot(psi))))
         trunc_prob = [round(full_prob[k], 4) for k in range(len(full_prob))]
-        # this is the probability of being in eigenvector N -- note, if you want the probabilities of being
-        # in the sigma_z basis this is not that!
-        probabilities.append(trunc_prob)      # check P = [P abs(Vn'*psi).^2];
-        gap = min(eigenvalues[1:n_adaptive]-eigenvalues[0: n_adaptive - 1])        # check
+
+        # probability of being in eigenvector N; NOT probabilities of being in the sigma_z basis
+        probabilities.append(trunc_prob)    # check P = [P abs(Vn'*psi).^2]
+        gap = min(eigenvalues[1:n_adaptive]-eigenvalues[0: n_adaptive - 1])
 
         # Determining the integration step based on the gap size
 
-        if use_adaptive_stepsize:
-            if abs(gap_old - gap) / (gap + 0.00001) > 0.05 and gap > gap_min_adaptive:
-                s_step /= 2
-            else:
-                s_step = min(max_step, s_step * 2)
+        if abs(gap_old - gap) / (gap + 0.00001) > 0.05 and gap > gap_min_adaptive:
+            s_step /= 2
+
         s += s_step
         if s_max-s_step < s < s_max+s_step:
             s = s_max
         gap_old = gap
-        if gap < gap_min:
-            gap_min = gap       # this will be the minimum gap
-            s_gap = s           # this is going to be the s where the min gap is
 
     if verbose:
         print('This function call took', time.time() - start, 'seconds.')
@@ -185,4 +161,4 @@ def evolve_schrodinger(h, jay, s_min, s_max, tf, number_of_levels, n_qubits, n_i
         print('final_probabilities:')
         print(["{:.2f}".format(final_probabilities[k]) for k in range(len(final_probabilities))])
 
-    return ts, correlation_matrix_list[-1]   # only return last element of the list
+    return correlation_matrix_list[-1]   # only return last element of the list

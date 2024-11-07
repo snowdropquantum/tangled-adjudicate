@@ -36,7 +36,9 @@ The expected input to the adjudicators in this repo are Tangled game states. The
 the following keys:
 
 * 'num_nodes': an integer, the number of vertices in the game graph
-* 'edges': a list of 3-tuples of length edge_count where the first two elements are indices of the vertices that edge connects and the third element is: 0 if the edge is unselected; 1 if the edge is gray (no coupling, J=0); 2 if the edge is green (ferromagnetic coupling, J=-1); and 3 if the edge is purple (antiferromagnetic coupling, J=+1)
+* 'edges': a list of 3-tuples of length edge_count where the first two elements are indices of the vertices that edge 
+connects and the third element is: 0 if the edge is unselected; 1 if the edge is gray (no coupling, J=0); 2 if the edge 
+is green (ferromagnetic coupling, J=-1); and 3 if the edge is purple (antiferromagnetic coupling, J=+1)
 * 'player1_id' and 'player2_id': strings, specifying the names of the agents
 * 'turn_count': an integer, the number of turns that have been played to obtain the game state
 * 'current_player_index': an integer, either 1 or 2, corresponding to whose turn it is 
@@ -62,7 +64,7 @@ Adjudicators output a dictionary with the following keys:
 * 'game_state': a copy of the input game_state dictionary
 * 'adjudicator': a string, one of 'simulated_annealing', 'quantum_annealing', 'schrodinger_equation'
 * 'winner': if both players have chosen vertices, a string, one of 'red', 'blue', 'draw', otherwise None
-* 'score': if both players have chosen vertices, the difference in their influence scores as a real number, otherwise None
+* 'score': if both players have chosen vertices, the difference in influence scores as a real number, otherwise None
 * 'influence_vector': a vector of real numbers of length vertex_count (one real number per vertex in the game graph)
 * 'correlation_matrix': symmetric real-valued matrix of spin-spin correlations with zeros on diagonals
 * 'parameters': a copy of the parameters dictionary
