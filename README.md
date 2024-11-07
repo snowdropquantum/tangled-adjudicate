@@ -18,7 +18,7 @@ This allows the tangled-adjudicate repo to support investigation more general th
 
 ## Setup
 
-Python 3.9,
+TBD but Python 3.10.15, dwave-ocean 6.0.1, matplotlib 3.9.2
 
 ## Next Category
 In particular for the Quantum Annealing solver, there are several non-obvious steps that we document here.
