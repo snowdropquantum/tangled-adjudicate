@@ -1,3 +1,5 @@
+""" given a D-Wave processor (target graph) and a source graph, find as many embeddings as possible of the source
+graph into the target hardware graph """
 import time
 import os
 import pickle
@@ -9,30 +11,33 @@ from dwave import embedding
 from dwave.system.samplers import DWaveSampler
 from minorminer import subgraph as glasgow
 
-from utils.game_graph_properties import GraphProperties
+from tangled_adjudicate.utils.game_graph_properties import GraphProperties
+from tangled_adjudicate.utils.parameters import Params
 
 
-def get_zephyr_subgrid(A, rows, cols, gridsize=4):
+def get_zephyr_subgrid(qubit_connectivity_graph, rows, cols, gridsize=4):
     """Make a subgraph of a Zephyr (Advantage2) graph on a set of rows and columns of unit cells.
 
     Args:
-        A (nx.Graph): Qubit connectivity graph
+        qubit_connectivity_graph (nx.Graph): Qubit connectivity graph
         rows (Iterable): Iterable of rows of unit cells to include
         cols (Iterable): Iterable of columns of unit cells to include
+        gridsize: Int
 
     Returns:
-        nx.Graph: The subgraph of A induced on the nodes in "rows" and "cols"
+        nx.Graph: The subgraph of qubit_connectivity_graph induced on the nodes in "rows" and "cols"
+
     """
 
-    coords = [dnx.zephyr_coordinates(gridsize).linear_to_zephyr(v) for v in A.nodes]
+    coords = [dnx.zephyr_coordinates(gridsize).linear_to_zephyr(v) for v in qubit_connectivity_graph.nodes]
     # c = np.asarray(coords)
     used_coords = [c for c in coords if
                    (c[0] == 0 and c[4] in cols and 2 * min(rows) <= c[1] <= 2 * max(rows) + 2) or
                    (c[0] == 1 and c[4] in rows and 2 * min(cols) <= c[1] <= 2 * max(cols) + 2)]
     # (u, w, k, z) -> (u, w, k / 2, k % 2, z)
 
-    subgraph = A.subgraph([dnx.zephyr_coordinates(gridsize).zephyr_to_linear(c)
-                          for c in used_coords]).copy()
+    subgraph = qubit_connectivity_graph.subgraph([dnx.zephyr_coordinates(gridsize).zephyr_to_linear(c)
+                                                  for c in used_coords]).copy()
 
     return subgraph
 
@@ -75,29 +80,29 @@ def get_independent_embeddings(embs):
     return [embs[x] for x in s_best]
 
 
-def search_for_subgraphs_in_subgrid(B, subgraph, timeout=20, max_number_of_embeddings=np.inf, verbose=False):
+def search_for_subgraphs_in_subgrid(subgrid_graph, subgraph, timeout=20, max_embeddings=np.inf, verbose=False):
     """Find a list of subgraph (embeddings) in a subgrid.
 
     Args:
-        B (nx.Graph): a subgrid
-        subgraph (nx.Graph): subgraphs in B to search for
+        subgrid_graph (nx.Graph): a subgrid
+        subgraph (nx.Graph): subgraphs in subgrid_graph to search for
         timeout (int, optional): time limit for search. Defaults to 20.
-        max_number_of_embeddings (int, optional): maximum number of embeddings to look for. Defaults to np.inf.
+        max_embeddings (int, optional): maximum number of embeddings to look for. Defaults to np.inf.
         verbose (bool, optional): Flag for verbosity. Defaults to True.
 
     Returns:
         List[dict]: a list of embeddings
     """
     embs = []
-    while True and len(embs) < max_number_of_embeddings:
-        temp = glasgow.find_subgraph(subgraph, B, timeout=timeout, triggered_restarts=True)
+    while True and len(embs) < max_embeddings:
+        temp = glasgow.find_subgraph(subgraph, subgrid_graph, timeout=timeout, triggered_restarts=True)
         if len(temp) == 0:
             break
         else:
-            B.remove_nodes_from(temp.values())
+            subgrid_graph.remove_nodes_from(temp.values())
             embs.append(temp)
             if verbose:
-                print(f'{len(B)} vertices remain...')
+                print(f'{len(subgrid_graph)} vertices remain...')
 
     if verbose:
         print(f'Found {len(embs)} embeddings.')
@@ -105,7 +110,7 @@ def search_for_subgraphs_in_subgrid(B, subgraph, timeout=20, max_number_of_embed
 
 
 def raster_embedding_search(hardware_graph, subgraph, raster_breadth=2, delete_used=True,
-                            verbose=False, gridsize=6, verify_embeddings=False, **kwargs):
+                            verbose=False, gridsize=6, **kwargs):
     """Returns a matrix (n, L) of subgraph embeddings to hardware_graph.
 
     Args:
@@ -116,38 +121,27 @@ def raster_embedding_search(hardware_graph, subgraph, raster_breadth=2, delete_u
                                       If set to true, nodes cannot be used in multiple embeddings. Defaults to True.
         verbose (bool, optional): Whether to print progress. Defaults to True.
         gridsize (int, optional): Size of grid. Defaults to 16.
-        verify_embeddings (bool, optional): Flag whether embeddings should be verified. Defaults to False.
-
-    Raises:
-        Exception: Exception raised when embeddings are invalid and when `verify_embeddings` is True.
 
     Returns:
         numpy.ndarray: a matrix of embeddings
     """
 
-    A = hardware_graph.copy()
+    hardware_graph_copy = hardware_graph.copy()
 
     embs = []
     for row_offset in range(gridsize - raster_breadth + 1):
 
         for col_offset in range(gridsize - raster_breadth + 1):
-            B = get_zephyr_subgrid(A, range(row_offset, row_offset + raster_breadth),
-                                   range(col_offset, col_offset + raster_breadth), gridsize)
+            zephyr_subgrid = get_zephyr_subgrid(hardware_graph_copy, range(row_offset, row_offset + raster_breadth),
+                                                range(col_offset, col_offset + raster_breadth), gridsize)
 
             if verbose:
-                print(f'row,col=({row_offset},{col_offset}) starting with {len(B)} vertices')
+                print(f'row, col=({row_offset}, {col_offset}) starting with {len(zephyr_subgrid)} vertices')
 
-            sub_embs = search_for_subgraphs_in_subgrid(B, subgraph, verbose=verbose, **kwargs)
+            sub_embs = search_for_subgraphs_in_subgrid(zephyr_subgrid, subgraph, verbose=verbose, **kwargs)
             if delete_used:
                 for sub_emb in sub_embs:
-                    A.remove_nodes_from(sub_emb.values())
-
-            if verify_embeddings:
-                for emb in sub_embs:
-                    X = list(embedding.diagnose_embedding({p: [emb[p]] for p in emb}, subgraph, _A))
-                    if len(X):
-                        print(X[0])
-                        raise Exception
+                    hardware_graph_copy.remove_nodes_from(sub_emb.values())
 
             embs += sub_embs
 
@@ -159,74 +153,60 @@ def raster_embedding_search(hardware_graph, subgraph, raster_breadth=2, delete_u
     return embmat
 
 
-def load_embeddings_dictionary(file_name):
-
-    with open(os.path.join(os.getcwd(), '..', 'data', file_name), "rb") as fp:
-        dictionary_of_embeddings = pickle.load(fp)
-
-    return dictionary_of_embeddings
-
-
-def main():
-    # generates embeddings into hardware for graphs 1 through 10; default settings take about 10 minutes total to run
+def get_embeddings(source_graph_number, qc_solver_to_use):
+    # generates multiple parallel embeddings into hardware for your graph
+    # the smaller the graph, the longer this takes -- e.g. source_graph_number == 1 takes about 4 minutes
     #
-    # the dictionary_of_embeddings object looks like
-    # dictionary_of_embeddings = {1: [[1094, 1100], [609, 1019] , ... ], 2: [[1093, 1098, 136], [558, 725, 731], ... ]}
-    # number found for raster_breadth = 2 and grid_size = 6 : 578, 346, 219, 167, 86, 48, 58, 32, 16, 8
+    # the list_of_embeddings object looks like
+    # list_of_embeddings = [[1093, 1098, 136], [558, 725, 731], ... ]
+    # number found for 'Advantage2_prototype2.5', raster_breadth == 2 and grid_size == 6
+    # 577, 343, 215, 169, 87, 48, 58, 33, 15, 9
 
-    raster_breadth = 2   # these parameters seem to work well to get a lot of embeddings
+    # these parameters seem to work well to get a lot of embeddings, you can try to change them if you want
+    raster_breadth = 2
     grid_size = 6
 
-    generate_embeddings_file = False  # if True generates the embeddings in /data directory, else attempts to load it
-    embeddings_file_name = ('embeddings_dictionary_graphs_1_through_10_raster_breadth_'
-                            + str(raster_breadth) + '_gridsize_' + str(grid_size) + '.pkl')   # name of data file
+    file_name = ('embeddings_graph_number_' + str(source_graph_number) + '_raster_breadth_' + str(raster_breadth) +
+                 '_gridsize_' + str(grid_size) + '_qc_' + qc_solver_to_use + '.pkl')
 
-    # checks to see if /data exists; if it doesn't it creates it; if it does, it writes the file to disk
-    data_dir = os.path.join(os.getcwd(), '..', 'data')
+    data_dir = os.path.join(os.getcwd(), '..', 'data')      # checks to see if /data exists; if not, creates it
 
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
 
-    initial_start = time.time()
+    file_path = os.path.join(data_dir, file_name)
 
-    if generate_embeddings_file:
-        dictionary_of_embeddings = {}
-
-        # choose a hardware graph, or more generally the target graph for the embedding
-        target_graph = DWaveSampler(solver='Advantage2_prototype2.4').to_networkx_graph()
-
-        for graph_number in range(1, 11):
-
-            # define source graph
-            graph = GraphProperties(graph_number=graph_number)
-            source_graph = nx.Graph()
-            source_graph.add_nodes_from([k for k in range(graph.vertex_count)])
-            source_graph.add_edges_from(graph.edge_list)
-
-            print('********************')
-            print('Evaluating graph #', graph_number, ', raster_breadth', raster_breadth, 'and grid_size', grid_size)
-            print('********************')
-
-            start = time.time()
-
-            embmat = raster_embedding_search(target_graph, source_graph,
-                                             raster_breadth=raster_breadth,
-                                             gridsize=grid_size)
-
-            dictionary_of_embeddings[graph_number] = [k.tolist() for k in embmat]
-            print('graph_number', graph_number, 'took', time.time() - start, 'seconds.')
-
-        with open(os.path.join(data_dir, embeddings_file_name), "wb") as fp:
-            pickle.dump(dictionary_of_embeddings, fp)
-
+    # checks to see if the file is there already; if it is, load it; if not, create it
+    if os.path.isfile(file_path):
+        with open(file_path, "rb") as fp:
+            list_of_embeddings = pickle.load(fp)
     else:
+        print('********************')
+        print('embeddings file not found, creating it, this will only happen once for this choice of parameters ...')
+        print('finding embeddings for source graph #', source_graph_number, 'into target graph', qc_solver_to_use)
+        print('using raster_breadth', raster_breadth, 'and grid_size', grid_size)
+        print('********************')
 
-        dictionary_of_embeddings = load_embeddings_dictionary(file_name=embeddings_file_name)
-        print('this is the loaded dictionary:')
-        print(dictionary_of_embeddings)
+        start = time.time()
 
-    print('total time was', time.time() - initial_start, 'seconds.')
+        # target graph for the embedding
+        target_graph = DWaveSampler(solver=qc_solver_to_use).to_networkx_graph()
 
+        # source graph
+        graph = GraphProperties(graph_number=source_graph_number)
+        source_graph = nx.Graph()
+        source_graph.add_nodes_from([k for k in range(graph.vertex_count)])
+        source_graph.add_edges_from(graph.edge_list)
 
-if __name__ == "__main__":
-    main()
+        # find embeddings
+        embmat = raster_embedding_search(target_graph, source_graph,
+                                         raster_breadth=raster_breadth,
+                                         gridsize=grid_size)
+
+        list_of_embeddings = [k.tolist() for k in embmat]
+        print('for graph_number', source_graph_number, 'computing embeddings took', time.time() - start, 'seconds.')
+
+        with open(os.path.join(data_dir, file_name), "wb") as fp:
+            pickle.dump(list_of_embeddings, fp)
+
+    return list_of_embeddings
