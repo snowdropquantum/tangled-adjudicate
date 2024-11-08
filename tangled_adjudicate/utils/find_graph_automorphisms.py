@@ -16,7 +16,7 @@ import os
 import time
 import pickle
 import networkx as nx
-from utils.game_graph_properties import GraphProperties
+from tangled_adjudicate.utils.game_graph_properties import GraphProperties
 
 
 def automorphisms(graph):
@@ -24,6 +24,7 @@ def automorphisms(graph):
 
 
 def limited_automorphisms(graph, max_number=5):
+    # if there are too many to compute, you can use this function that will stop after computing max_number of them
 
     graph_matcher_object = nx.algorithms.isomorphism.GraphMatcher(graph, graph)
 
@@ -61,67 +62,58 @@ def generate_list_of_automorphisms(vertex_count, edge_list, max_automorphisms_to
     return automorphisms_list
 
 
-def load_automorphism_dictionary(file_name):
-
-    with open(os.path.join(os.getcwd(), '..', 'data', file_name), "rb") as fp:
-        dictionary_of_automorphisms = pickle.load(fp)
-
-    return dictionary_of_automorphisms
-
-
-def main():
-    # generates automorphisms for graphs 1 through 10; default settings take about 10 minutes total to run
+def get_automorphisms(graph_number):
+    # returns automorphisms for the graph corresponding to the graph_number you want (graph_number is the index of
+    # your graph as defined in /utils/game_graph_properties.py, default 1 through 10, but you can add new ones if
+    # you want -- if you do, I'd suggest indexing your new graphs starting at 11 so you don't accidentally confuse
+    # which graph is which)
     #
+    # if they exist already, they are loaded, if not, they are computed
+    # all the default graphs compute fast except graph 10, where default settings take about 10 minutes total to run
     # I let graph 10 run all day with 128GB RAM, and it didn't complete, so I enabled a limit on the number
     # returned, which I set to 500,000. This returns all the automorphisms for graphs 1 through 9. I don't know how
-    # many graph 10 has ... but it's a lot more than 500,000! For the game graph, I will likely drop some
-    # vertices / edges which will dramatically reduce the number of automorphisms for it -- of course the
-    # underlying hardware graph still has them.
+    # many graph 10 has ... but it's a lot more than 500,000!
     #
-    # the dictionary_of_automorphisms object looks like
-    # dictionary_of_automorphisms = {1: [{0: 0, 1: 1}, {1: 0, 0: 1}],
-    # 2: [{0: 0, 1: 1, 2: 2}, {0: 0, 2: 1, 1: 2}, {1: 0, 0: 1, 2: 2},
-    # {1: 0, 2: 1, 0: 2}, {2: 0, 0: 1, 1: 2}, {2: 0, 1: 1, 0: 2}]}
+    # Note: these are the automorphisms of the source graph -- the processor target graph is not relevant here
+    #
+    # the list_of_automorphisms object returned is a list of the different automorphisms of your graph, like this:
+    #
+    # list_of_automorphisms = [{0: 0, 1: 1, 2: 2}, {0: 0, 2: 1, 1: 2}, {1: 0, 0: 1, 2: 2}, {1: 0, 2: 1, 0: 2},
+    # {2: 0, 0: 1, 1: 2}, {2: 0, 1: 1, 0: 2}]
 
-    generate_automorphism_file = True  # if True generates the dictionary in /data directory, else attempts to load it
-    automorphism_file_name = 'automorphism_dictionary_graphs_1_through_10_max_500000.pkl'   # name of data file
-    max_automorphisms_to_return = 500000   # either an integer, or None if you want all of them
+    max_automorphisms_to_return = 500000                    # either an integer, or None if you want all of them
 
-    # checks to see if /data exists; if it doesn't it creates it; if it does, it writes the file to disk
-    data_dir = os.path.join(os.getcwd(), '..', 'data')
+    file_name = 'automorphisms_graph_number_' + str(graph_number) + '_max_' + str(max_automorphisms_to_return) + '.pkl'
+
+    data_dir = os.path.join(os.getcwd(), '..', 'data')      # checks to see if /data exists; if not, creates it
 
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)
 
-    if generate_automorphism_file:
-        dictionary_of_automorphisms = {}
+    file_path = os.path.join(data_dir, file_name)
 
-        for graph_number in range(1, 11):
-            print('********************')
-            print('Evaluating graph #', graph_number)
-            print('********************')
-
-            start = time.time()
-
-            graph = GraphProperties(graph_number=graph_number)
-
-            dictionary_of_automorphisms[graph_number] = (
-                generate_list_of_automorphisms(vertex_count=graph.vertex_count,
-                                               edge_list=graph.edge_list,
-                                               max_automorphisms_to_return=max_automorphisms_to_return,
-                                               verbose=True))
-
-            print('graph_number', graph_number, 'took', time.time() - start, 'seconds.')
-
-        with open(os.path.join(data_dir, automorphism_file_name), "wb") as fp:
-            pickle.dump(dictionary_of_automorphisms, fp)
-
+    # checks to see if the file is there already; if it is, load it; if not, create it
+    if os.path.isfile(file_path):
+        with open(file_path, "rb") as fp:
+            list_of_automorphisms = pickle.load(fp)
     else:
+        print('********************')
+        print('automorphism file not found, creating it, this should only happen once per graph ...')
+        print('finding automorphisms for graph #', graph_number)
+        print('********************')
 
-        dictionary_of_automorphisms = load_automorphism_dictionary(file_name=automorphism_file_name)
-        print('this is the loaded dictionary:')
-        print(dictionary_of_automorphisms)
+        start = time.time()
 
+        graph = GraphProperties(graph_number=graph_number)
 
-if __name__ == "__main__":
-    sys.exit(main())
+        list_of_automorphisms = generate_list_of_automorphisms(vertex_count=graph.vertex_count,
+                                                               edge_list=graph.edge_list,
+                                                               max_automorphisms_to_return=max_automorphisms_to_return,
+                                                               verbose=True)
+
+        print('for graph_number', graph_number, 'this took', time.time() - start, 'seconds.')
+
+        with open(os.path.join(data_dir, file_name), "wb") as fp:
+            pickle.dump(list_of_automorphisms, fp)
+
+    return list_of_automorphisms
