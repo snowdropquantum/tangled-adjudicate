@@ -47,7 +47,7 @@ class GraphProperties(object):
                               (8, 9)]
 
         elif graph_number == 6:
-            # t4D tesseract graph, 16 vertices, 32 edges
+            # 4D tesseract graph, 16 vertices, 32 edges
             self.vertex_count = 16
 
             self.edge_list = [(0, 3), (0, 5), (0, 9), (0, 15),
