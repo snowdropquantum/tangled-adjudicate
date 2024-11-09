@@ -11,10 +11,10 @@
 # The second is that the same physical qubits can be used to embed P different equivalent graphs in different
 # ways. Doing this is important because it 'averages over' the noise that may be present in the physical system.
 
-import sys
 import os
 import time
 import pickle
+
 import networkx as nx
 from tangled_adjudicate.utils.game_graph_properties import GraphProperties
 
@@ -45,16 +45,16 @@ def generate_list_of_automorphisms(vertex_count, edge_list, max_automorphisms_to
     # [{0: 0, 1: 1, 2: 2}, {0: 0, 2: 1, 1: 2}, {1: 0, 0: 1, 2: 2},
     # {1: 0, 2: 1, 0: 2}, {2: 0, 0: 1, 1: 2}, {2: 0, 1: 1, 0: 2}]
 
-    G = nx.Graph()
+    graph_to_use = nx.Graph()
     node_list = [k for k in range(vertex_count)]
 
-    G.add_nodes_from(node_list)
-    G.add_edges_from(edge_list)
+    graph_to_use.add_nodes_from(node_list)
+    graph_to_use.add_edges_from(edge_list)
 
     if max_automorphisms_to_return is not None:
-        automorphisms_list = limited_automorphisms(G, max_number=max_automorphisms_to_return)
+        automorphisms_list = limited_automorphisms(graph_to_use, max_number=max_automorphisms_to_return)
     else:
-        automorphisms_list = automorphisms(G)
+        automorphisms_list = automorphisms(graph_to_use)
 
     if verbose:
         print(len(automorphisms_list), "automorphisms found.")
