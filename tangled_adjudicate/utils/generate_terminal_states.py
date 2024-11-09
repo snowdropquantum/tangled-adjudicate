@@ -132,9 +132,9 @@ def generate_all_tangled_terminal_states(graph_number):
 
 def main():
 
+    # this generates all terminal states for graphs 2 and 3
     for graph_number in range(2, 4):
         generate_all_tangled_terminal_states(graph_number)
-        print()
 
 if __name__ == "__main__":
     sys.exit(main())
