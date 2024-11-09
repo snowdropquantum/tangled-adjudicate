@@ -7,12 +7,10 @@ import dwave_networkx as dnx
 import networkx as nx
 import numpy as np
 
-from dwave import embedding
 from dwave.system.samplers import DWaveSampler
 from minorminer import subgraph as glasgow
 
 from tangled_adjudicate.utils.game_graph_properties import GraphProperties
-from tangled_adjudicate.utils.parameters import Params
 
 
 def get_zephyr_subgrid(qubit_connectivity_graph, rows, cols, gridsize=4):
@@ -30,11 +28,10 @@ def get_zephyr_subgrid(qubit_connectivity_graph, rows, cols, gridsize=4):
     """
 
     coords = [dnx.zephyr_coordinates(gridsize).linear_to_zephyr(v) for v in qubit_connectivity_graph.nodes]
-    # c = np.asarray(coords)
+
     used_coords = [c for c in coords if
                    (c[0] == 0 and c[4] in cols and 2 * min(rows) <= c[1] <= 2 * max(rows) + 2) or
                    (c[0] == 1 and c[4] in rows and 2 * min(cols) <= c[1] <= 2 * max(cols) + 2)]
-    # (u, w, k, z) -> (u, w, k / 2, k % 2, z)
 
     subgraph = qubit_connectivity_graph.subgraph([dnx.zephyr_coordinates(gridsize).zephyr_to_linear(c)
                                                   for c in used_coords]).copy()
@@ -55,11 +52,11 @@ def get_independent_embeddings(embs):
     g_emb = nx.Graph()
     g_emb.add_nodes_from(range(len(embs)))
     for i, emb1 in enumerate(embs):
-        V1 = set(emb1.values())
+        v1 = set(emb1.values())
         for j in range(i + 1, len(embs)):
             emb2 = embs[j]
-            V2 = set(emb2.values())
-            if not V1.isdisjoint(V2):
+            v2 = set(emb2.values())
+            if not v1.isdisjoint(v2):
                 g_emb.add_edge(i, j)
 
     start = time.process_time()
@@ -68,12 +65,12 @@ def get_independent_embeddings(embs):
     max_size = 0
     for i in range(100000):
         if len(g_emb) > 0:
-            S = nx.maximal_independent_set(g_emb)
+            s = nx.maximal_independent_set(g_emb)
         else:
             return []
-        if len(S) > max_size:
-            s_best = S
-            max_size = len(S)
+        if len(s) > max_size:
+            s_best = s
+            max_size = len(s)
 
     print(f'Built 100,000 greedy MIS.  Took {time.process_time()-start} seconds')
     print(f'Found {len(s_best)} disjoint embeddings.')
