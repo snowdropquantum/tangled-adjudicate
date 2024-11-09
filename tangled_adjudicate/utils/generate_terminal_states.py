@@ -7,7 +7,7 @@ import math
 import ast
 import numpy as np
 from tangled_adjudicate.utils.game_graph_properties import GraphProperties
-
+from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
 
 def convert_state_string_to_game_state(graph, terminal_state_string):
 
@@ -31,22 +31,28 @@ def convert_state_string_to_game_state(graph, terminal_state_string):
     return game_state
 
 
-# todo make sure this works
-
-def write_unique_states_to_disk(graph_number):
+def generate_all_tangled_terminal_states(graph_number):
     # this generates all possible terminal game states for the graph indexed by graph_number and groups them into lists
-    # where each member of the list is connected by an automorphism.
-    # Running this function requires either loading or generating an automorphism file.
-    # The dictionary game_states has as its key a string with the canonical member of each of these, with the further
-    # ['automorphisms'] key being a list of all the states that are symmetries of the canonical key. The key
-    # ['game_state'] is the representation of the key as a game_state object.
+    # where each member of the list is connected by an automorphism. Running this function requires either loading
+    # or generating an automorphism file.The dictionary game_states has as its key a string with the canonical member
+    # of each of these, with the further ['automorphisms'] key being a list of all the states that are symmetries of
+    # the canonical key. The key ['game_state'] is the representation of the key as a game_state object.
     #
     # Note that this requires enumerating all possible terminal states, the number of which is
     # (vertex_count choose 2) * 2 * 3**edge_count, which grows exponentially with edge count. You can do this easily
     # for graph_number 1, 2, 3, 4, but 5 and up get stupidly large.
 
     graph = GraphProperties(graph_number)
-    list_of_automorphs = get_automorphisms(graph_number)
+
+    # add check to make sure you don't ask for something too large
+    print('***************************')
+    user_input = input('There are ' + str(math.comb(graph.vertex_count, 2) * 2 * 3**graph.edge_count) +
+                       ' terminal states -- proceed (y/n)?')
+    if user_input.lower() != 'y':
+        sys.exit(print('exiting...'))
+    print('***************************')
+
+    list_of_automorphisms = get_automorphisms(graph_number)
 
     possible_vertex_states = []
     for positions in itertools.permutations(range(graph.vertex_count), 2):
@@ -69,7 +75,7 @@ def write_unique_states_to_disk(graph_number):
         red_vertex_index = only_vertices.index(1)
         blue_vertex_index = only_vertices.index(2)
         same_group_of_states[str(state)] = []
-        for automorph in list_of_automorphs:
+        for automorph in list_of_automorphisms:
             new_red_vertex_index = automorph[red_vertex_index]
             new_blue_vertex_index = automorph[blue_vertex_index]
             transformed_each = [0] * graph.vertex_count
@@ -127,8 +133,8 @@ def write_unique_states_to_disk(graph_number):
 def main():
 
     for graph_number in range(2, 4):
-        write_unique_states_to_disk(graph_number)
-
+        generate_all_tangled_terminal_states(graph_number)
+        print()
 
 if __name__ == "__main__":
     sys.exit(main())
