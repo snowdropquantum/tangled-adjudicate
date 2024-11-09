@@ -1,9 +1,9 @@
 import time
-from math import floor, sqrt, pi, inf, log2
+from math import floor, sqrt, pi, log2
 import numpy as np
-from scipy.linalg import expm
-from schrodinger.sparse_matrices import create_pauli_matrices_for_full_size_hamiltonian, load_schedule_data, \
-    create_sparse_hamiltonian, compute_eigenvalues_and_eigenvectors
+from tangled_adjudicate.schrodinger.sparse_matrices import (create_pauli_matrices_for_full_size_hamiltonian,
+                                                            load_schedule_data, create_sparse_hamiltonian,
+                                                            compute_eigenvalues_and_eigenvectors)
 
 
 def initialize_wavefunction(eigenvalues, eigenvectors, n_i, gap_initial):
