@@ -1,6 +1,5 @@
 """ this is to test sparse matrix operations required for schrodinger """
 import os
-from math import floor
 import numpy as np
 from scipy import sparse
 from scipy.linalg import eigh, eig
@@ -135,7 +134,6 @@ def compute_eigenvalues_and_eigenvectors(big_h, number_of_levels, n_qubits, use_
                 evalues, eigenvectors = eigh(big_h.toarray())   # this is taking up most of the time!!!
                 #############################################
             except:
-                print('things didnt work! trying this bigh', big_h.toarray() + 0.00001 * np.eye(int(number_of_levels)))
                 evalues, eigenvectors = eigh(big_h.toarray() + 0.00001 * np.eye(int(number_of_levels)))
 
             eigenvalues = np.real(evalues)  # ensures no complex tomfoolery
