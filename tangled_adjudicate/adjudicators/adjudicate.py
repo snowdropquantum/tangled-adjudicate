@@ -4,46 +4,63 @@ import os
 import pickle
 import dimod
 import numpy as np
+
 from tangled_adjudicate.utils.utilities import game_state_to_ising_model
+from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
 from tangled_adjudicate.schrodinger.schrodinger_functions import evolve_schrodinger
+
 from dwave.system import DWaveSampler, FixedEmbeddingComposite
 from dwave.system.testing import MockDWaveSampler
 from dwave.preprocessing.composites import SpinReversalTransformComposite
 
 
+# todo go through this whole thing carefully
+
 class Adjudicator(object):
     def __init__(self, params):
         self.params = params
-        if self.params.USE_QC:   # if we are using the QC, load embeddings and automorphisms
-            data_dir = os.path.join(os.getcwd(), 'data')
-            embed_file = 'embeddings_dictionary_graphs_1_through_10_raster_breadth_2_gridsize_6.pkl'
-            automorph_file = 'automorphism_dictionary_graphs_1_through_10_max_500000.pkl'
-            with open(os.path.join(data_dir, embed_file), "rb") as fp:
-                self.embeddings = pickle.load(fp)[self.params.GRAPH_NUMBER]
-            with open(os.path.join(data_dir, automorph_file), "rb") as fp:
-                self.automorphisms = pickle.load(fp)[self.params.GRAPH_NUMBER]
+        # if we are using the QC, load embeddings and automorphisms from /data; if they are not there,
+        # compute them for your processor choice
+        if self.params.USE_QC:
+            self.automorphisms = get_automorphisms(self.params.GRAPH_NUMBER)
+            self.embeddings = get_embeddings(self.params.GRAPH_NUMBER, self.params.QC_SOLVER_TO_USE)
+            # data_dir = os.path.join(os.getcwd(), 'data')
+            # embed_file = 'embeddings_dictionary_graphs_1_through_10_raster_breadth_2_gridsize_6.pkl'
+            # automorph_file = 'automorphism_dictionary_graphs_1_through_10_max_500000.pkl'
+            # with open(os.path.join(data_dir, embed_file), "rb") as fp:
+            #     self.embeddings = pickle.load(fp)[self.params.GRAPH_NUMBER]
+            # with open(os.path.join(data_dir, automorph_file), "rb") as fp:
+            #     self.automorphisms = pickle.load(fp)[self.params.GRAPH_NUMBER]
 
     def compute_winner_score_and_influence_from_correlation_matrix(self, game_state, correlation_matrix):
         # correlation_matrix is assumed to be symmetric matrix with zeros on diagonal (so that self-correlation of
         # one is not counted) -- this is the standard for computing influence vector
+        # returns:
+        # winner: if game_state is terminal, string -- one of 'red' (player 1), 'blue' (player 2), 'draw'
+        # if game_state not terminal, returns None
+        # score: if game_state is terminal, returns a real number which is the score of the game (difference
+        # between two players' influences obtained from the influence vector)
+        # if game_state not terminal, returns None
+        # influence_vector: a vector of real numbers of length == number of vertices; this stores each vertex's
+        # influence, which is the sum over all elements of the correlation matrix it is part of
 
         influence_vector = np.sum(correlation_matrix, axis=0)
 
         if self.game_state_is_terminal(game_state):
-            score_difference = influence_vector[game_state['player1_node']] - influence_vector[game_state['player2_node']]
+            score = influence_vector[game_state['player1_node']] - influence_vector[game_state['player2_node']]
 
-            if score_difference > self.params.EPSILON:  # more positive than epsilon, red wins
+            if score > self.params.EPSILON:  # more positive than epsilon, red wins
                 winner = 'red'
             else:
-                if score_difference < -self.params.EPSILON:
+                if score < -self.params.EPSILON:
                     winner = 'blue'
                 else:
                     winner = 'draw'
         else:
-            score_difference = None
+            score = None
             winner = None
 
-        return winner, score_difference, influence_vector
+        return winner, score, influence_vector
 
     @staticmethod
     def game_state_is_terminal(game_state):

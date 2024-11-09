@@ -6,8 +6,7 @@ import pickle
 import math
 import ast
 import numpy as np
-from utils.game_graph_properties import GraphProperties
-from utils.parameters import Params
+from tangled_adjudicate.utils.game_graph_properties import GraphProperties
 
 
 def convert_state_string_to_game_state(graph, terminal_state_string):
@@ -32,25 +31,22 @@ def convert_state_string_to_game_state(graph, terminal_state_string):
     return game_state
 
 
-def write_unique_states_to_disk():
-    # this generates all possible terminal game states and groups them into lists where each member of the list is
-    # connected by an automorphism. The dictionary game_states has as its key a string with the canonical member of
-    # each of these, with the further ['automorphisms'] key being a list of all the states that are symmetries of the
-    # canonical key. The key ['game_state'] is the representation of the key as a game_state object.
+# todo make sure this works
+
+def write_unique_states_to_disk(graph_number):
+    # this generates all possible terminal game states for the graph indexed by graph_number and groups them into lists
+    # where each member of the list is connected by an automorphism.
+    # Running this function requires either loading or generating an automorphism file.
+    # The dictionary game_states has as its key a string with the canonical member of each of these, with the further
+    # ['automorphisms'] key being a list of all the states that are symmetries of the canonical key. The key
+    # ['game_state'] is the representation of the key as a game_state object.
     #
-    # set the Params value to the GRAPH_NUMBER you want and run this code. Note that this requires enumerating all
-    # possible terminal states, the number of which is (vertex_count choose 2) * 2 * 3**edge_count, which grows
-    # exponentially with edge count. You can do this easily for graph_number 1, 2, 3, 4, but 5 and up get stupidly
-    # large.
+    # Note that this requires enumerating all possible terminal states, the number of which is
+    # (vertex_count choose 2) * 2 * 3**edge_count, which grows exponentially with edge count. You can do this easily
+    # for graph_number 1, 2, 3, 4, but 5 and up get stupidly large.
 
-    params = Params()
-    graph = GraphProperties(params.GRAPH_NUMBER)
-    file_name_prefix = "graph_" + str(params.GRAPH_NUMBER)
-
-    data_dir = os.path.join(os.getcwd(), '..', 'data')
-    automorph_file = 'automorphism_dictionary_graphs_1_through_10_max_500000.pkl'
-    with open(os.path.join(data_dir, automorph_file), "rb") as fp:
-        automorphs = pickle.load(fp)[params.GRAPH_NUMBER]
+    graph = GraphProperties(graph_number)
+    list_of_automorphs = get_automorphisms(graph_number)
 
     possible_vertex_states = []
     for positions in itertools.permutations(range(graph.vertex_count), 2):
@@ -73,7 +69,7 @@ def write_unique_states_to_disk():
         red_vertex_index = only_vertices.index(1)
         blue_vertex_index = only_vertices.index(2)
         same_group_of_states[str(state)] = []
-        for automorph in automorphs:
+        for automorph in list_of_automorphs:
             new_red_vertex_index = automorph[red_vertex_index]
             new_blue_vertex_index = automorph[blue_vertex_index]
             transformed_each = [0] * graph.vertex_count
@@ -122,12 +118,16 @@ def write_unique_states_to_disk():
         game_states[str(each)]['game_state'] = convert_state_string_to_game_state(graph, each)
         game_states[str(each)]['automorphisms'] = good_states[str(each)]
 
-    with open(os.path.join(data_dir, file_name_prefix + "_unique_terminal_states.pkl"), "wb") as fp:
+    data_dir = os.path.join(os.getcwd(), '..', 'data')
+
+    with open(os.path.join(data_dir, "graph_" + str(graph_number) + "_unique_terminal_states.pkl"), "wb") as fp:
         pickle.dump(game_states, fp)
 
 
 def main():
-    write_unique_states_to_disk()
+
+    for graph_number in range(2, 4):
+        write_unique_states_to_disk(graph_number)
 
 
 if __name__ == "__main__":
