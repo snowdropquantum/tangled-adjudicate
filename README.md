@@ -18,10 +18,12 @@ This allows the tangled-adjudicate repo to support investigation more general th
 
 ## Setup
 
-TBD but Python 3.10.15, dwave-ocean 6.0.1, matplotlib 3.9.2
+Create empty conda environment with Python 3.10.15, pip install dwave-ocean-sdk matplotlib, open a terminal and
+do the following to set up the D-Wave stuff (you need a Leap account first for this to work, so get one!):
 
-## Next Category
-In particular for the Quantum Annealing solver, there are several non-obvious steps that we document here.
+dwave auth login
+dwave setup --auth
+dwave config create --auto-token
 
 ## Tangled Game Graph Specification
 

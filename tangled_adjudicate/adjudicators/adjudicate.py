@@ -1,20 +1,17 @@
 """ Adjudicator class for Tangled game states using Schrödinger Equation, Simulated Annealing, and D-Wave hardware """
 import neal
-import os
-import pickle
 import dimod
 import numpy as np
 
 from tangled_adjudicate.utils.utilities import game_state_to_ising_model
 from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
+from tangled_adjudicate.utils.find_hardware_embeddings import get_embeddings
 from tangled_adjudicate.schrodinger.schrodinger_functions import evolve_schrodinger
 
 from dwave.system import DWaveSampler, FixedEmbeddingComposite
 from dwave.system.testing import MockDWaveSampler
 from dwave.preprocessing.composites import SpinReversalTransformComposite
 
-
-# todo go through this whole thing carefully
 
 class Adjudicator(object):
     def __init__(self, params):
@@ -111,7 +108,7 @@ class Adjudicator(object):
         beta_max = 3
         # Limits equilibration. Can vary by model/protocol/QPU
         num_sweeps = 16
-        beta_range = [1 / np.sqrt(np.sum([Jij ** 2 for Jij in jay.values()])), beta_max]
+        beta_range = [1 / np.sqrt(np.sum([Jij ** 2 for Jij in jay.values()]) + 0.001), beta_max]   # 0.001 for J==0
         seed = None   # Choose seed=None if reproducibility is not desired
 
         # randomize_order=True implements standard symmetry-respecting Metropolis algorithm

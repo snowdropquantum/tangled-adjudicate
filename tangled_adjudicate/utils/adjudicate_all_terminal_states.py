@@ -77,7 +77,8 @@ def generate_adjudication_results_for_all_terminal_states(solver_to_use):
 def main():
 
     # all_solvers_list = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
-    solver_list = ['simulated_annealing', 'schrodinger_equation']
+    # solver_list = ['simulated_annealing', 'schrodinger_equation']
+    solver_list = ['quantum_annealing']
 
     for solver_to_use in solver_list:
         generate_adjudication_results_for_all_terminal_states(solver_to_use)
