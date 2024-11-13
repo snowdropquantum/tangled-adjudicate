@@ -15,3 +15,18 @@ def game_state_to_ising_model(game_state):
         jay[edge_list[k]] = edge_state_map[game_state['edges'][k][2]]
 
     return h, jay
+
+
+def game_state_is_terminal(game_state):
+    # a state is terminal if both players have chosen vertices and all edges have been played
+    # game_state = {'num_nodes': 6, 'edges': [(0, 1, 1), (0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 2), (1, 2, 1),
+    # (1, 3, 2), (1, 4, 3), (1, 5, 3), (2, 3, 1), (2, 4, 2), (2, 5, 3), (3, 4, 2), (3, 5, 1), (4, 5, 2)],
+    # 'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1,
+    # 'player1_node': 1, 'player2_node': 3}
+
+    edge_states = [each[2] for each in game_state['edges']]
+
+    if edge_states.count(0) == 0 and game_state['player1_node'] != -1 and game_state['player2_node'] != -1:
+        return True
+    else:
+        return False
