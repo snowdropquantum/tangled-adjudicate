@@ -9,6 +9,7 @@ import numpy as np
 from tangled_adjudicate.utils.game_graph_properties import GraphProperties
 from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
 
+
 def convert_state_string_to_game_state(graph, terminal_state_string):
 
     vertex_list = terminal_state_string[:graph.vertex_count]
@@ -138,11 +139,13 @@ def generate_all_tangled_terminal_states(graph_number):
 
     return game_states
 
+
 def main():
 
     # this generates all terminal states for graphs 2 and 3
     for graph_number in range(2, 4):
         gs = generate_all_tangled_terminal_states(graph_number)
+
 
 if __name__ == "__main__":
     sys.exit(main())
