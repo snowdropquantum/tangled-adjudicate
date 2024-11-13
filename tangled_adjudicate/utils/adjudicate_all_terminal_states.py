@@ -83,5 +83,6 @@ def main():
     for solver_to_use in solver_list:
         generate_adjudication_results_for_all_terminal_states(solver_to_use)
 
+
 if __name__ == "__main__":
     sys.exit(main())
