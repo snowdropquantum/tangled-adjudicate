@@ -20,8 +20,15 @@ class Params(object):
 
         # These are parameters related to the use of QC hardware, if you're not using QC you can just leave these
         self.USE_QC = True
-        self.USE_MOCK_DWAVE_SAMPLER = True    # set to True if you want a software version of the hardware (doesn't sample like the HW tho so don't trust it, just for debugging
+        self.USE_MOCK_DWAVE_SAMPLER = False   # set to True if you want a software version of the hardware (doesn't sample like the HW tho so don't trust it, just for debugging
         self.QC_SOLVER_TO_USE = 'Advantage2_prototype2.5'   # modify if you want to use a different QC
-        self.NUM_READS_QC = 10
+
+        self.NUMBER_OF_CHIP_RUNS = 1
+        self.NUM_READS_QC = 1000
         self.ANNEAL_TIME_IN_NS = 5
-        self.SPIN_REVERSAL_TRANSFORMS = 2
+
+        self.USE_GAUGE_TRANSFORM = True
+
+        self.USE_SHIM = False
+        self.ALPHA_PHI = 0.00001
+        self.SHIM_ITERATIONS = 10

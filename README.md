@@ -3,34 +3,36 @@ Tangled is a game designed such that determining who wins is a problem where the
 can read all about it [here](https://www.snowdropquantum.com/blog/play-the-game-8e7fb).
 
 This repo contains what I call **_adjudicators_**, which are functions that take as input a Tangled game state and 
-output the [influence vector](https://www.snowdropquantum.com/blog/influence) for that game state. In the case when 
-the game state is a terminal state, adjudicators also return the outcome of the game (win/loss/draw).
+output the correlation matrix and the [influence vector](https://www.snowdropquantum.com/blog/influence) derived from it
+for that game state. In the case when the game state is a terminal state, adjudicators also return the score and the 
+outcome of the game (win/loss/draw).
 
-We provide three different adjudicators:
+Three different adjudicators are provided:
 
 1. A Schrödinger Equation solver, which is only useful for tiny game graphs
 2. A Simulated Annealing solver, whose parameters are chosen to mimic D-Wave hardware, and 
-3. A Quantum Annealing solver that uses D-Wave hardware using my attempt to implement the process used to generate the 
-calibration refinement process described [here](file:///C:/Users/geord/Downloads/fcomp-05-1238988.pdf).
+3. A Quantum Annealing solver that uses D-Wave hardware using a variant of the calibration refinement process 
+described [here](https://www.frontiersin.org/journals/computer-science/articles/10.3389/fcomp.2023.1238988/full)
 
 In addition to the basic adjudicators, we provide several utility functions that support the adjudication process.
-This allows the tangled-adjudicate repo to support investigation more general than only adjudicating Tangled games.
 
 ## Setup
 
-Create empty conda environment with Python 3.10.15, pip install dwave-ocean-sdk matplotlib, open a terminal and
+Create an empty conda environment with Python 3.10.15, pip install dwave-ocean-sdk matplotlib, open a terminal and
 do the following to set up the D-Wave stuff (you need a Leap account first for this to work, so get one!):
 
 dwave auth login
 dwave setup --auth
 dwave config create --auto-token
 
+The full D-Wave setup instructions are [here](https://docs.ocean.dwavesys.com/en/stable/docs_cli.html).
+
 ## Tangled Game Graph Specification
 
-A Tangled game graph is specified by a graph number, which label specific graphs included here. In this module there
-are 10 included graphs numbered 1 through 10. Each graph requires specification of vertex count (how many vertices 
-the graph has) and an explicit edge list, which are included for these ten graphs. If you'd like to add a new graph,
-it's simple! Just add it to the GraphProperties class, found in the /utils/game_graph_properties.py file.
+A Tangled game graph is specified by a graph number, which label specific graphs included here. I've included ten graphs 
+numbered 1 through 10. Each graph requires specification of vertex count (how many vertices the graph has) and an 
+explicit edge list, which are included for these ten graphs. If you'd like to add a new graph, it's simple! Just add 
+it to the GraphProperties class, found in the /utils/game_graph_properties.py file.
 
 ## Tangled Game State Specification: Expected Input Format For Adjudicators
 
