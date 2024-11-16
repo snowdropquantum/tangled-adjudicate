@@ -9,7 +9,7 @@ import dimod
 import numpy as np
 import matplotlib.pyplot as plt
 
-from tangled_adjudicate.utils.utilities import game_state_to_ising_model, game_state_is_terminal
+from tangled_adjudicate.utils.utilities import game_state_to_ising_model, game_state_is_terminal, find_isolated_vertices
 from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
 from tangled_adjudicate.utils.find_hardware_embeddings import get_embeddings
 from tangled_adjudicate.schrodinger.schrodinger_functions import evolve_schrodinger
@@ -172,6 +172,11 @@ class Adjudicator(object):
         # base_h (all zero) and base_jay (not all zero).
 
         base_h, base_jay = game_state_to_ising_model(game_state)
+
+        # this finds any isolated vertices that may be in the graph -- we will replace the samples returned for these
+        # at the end with true 50/50 statistics, so we don't have to worry about them
+
+        isolated_vertices = find_isolated_vertices(number_of_problem_variables, base_jay)
 
         # We now enter a loop where each pass through the loop programs the chip to specific values of h and J but
         # now for the entire chip. We do this by first selecting one automorphism and embedding it in multiple
@@ -336,6 +341,10 @@ class Adjudicator(object):
 
         samples = np.delete(samples, (0), axis=0)  # delete first row of zeros
 
+        # replace columns where there are disconnect variables with truly random samples... seems to work?
+        for idx in isolated_vertices:
+            samples[:, idx] = np.random.choice([1, -1], size=samples.shape[0])
+
         sample_count = self.params.NUM_READS_QC * number_of_embeddings * self.params.NUMBER_OF_CHIP_RUNS
 
         # this is a full matrix with zeros on the diagonal that uses all the samples
@@ -479,7 +488,7 @@ def test_two_instances():
     #                 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
     #                 'player2_node': 2}]
 
-    game_states = [{'num_nodes': 3, 'edges': [(0, 1, 3), (0, 2, 2), (1, 2, 2)], 'player1_id': 'player1',
+    game_states = [{'num_nodes': 3, 'edges': [(0, 1, 1), (0, 2, 1), (1, 2, 2)], 'player1_id': 'player1',
                     'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
                     'player2_node': 2}]
 
@@ -534,12 +543,16 @@ def run_experiment_for_blog_post(params, file_path):
                     'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
                     'player2_node': 2}]
 
-    # m_and_n_list = [(50, 1), (10, 5), (5, 10), (1, 50)]
-    m_and_n_list = [(8, 1), (4, 2), (2, 4), (1, 8)]
+    # # m_and_n_list = [(50, 1), (10, 5), (5, 10), (1, 50)]
+    # m_and_n_list = [(8, 1), (4, 2), (2, 4), (1, 8)]
+    # # s_list = [1, 10]
     # s_list = [1, 10]
-    s_list = [1, 10]
+    #
+    # use_gauge_list = [False, True]
 
-    use_gauge_list = [False, True]
+    m_and_n_list = [(1, 100)]
+    s_list = [1]
+    use_gauge_list = [True]
 
     instance_idx = 1
 
@@ -619,8 +632,12 @@ def generate_histograms(score_and_timing_data):
             # Generate some random data (for example, normal distribution)
             data = score_data[i]
 
-            # Plot the histogram on the current subplot (ax)
-            ax.hist(data, range=[-1, 1], bins=11, color='skyblue', edgecolor='black')
+            if instance_key == 1:
+                ax.hist(data, range=[-0.01, 0.01], bins=101, color='skyblue', edgecolor='black')
+                ax.vlines(x=0, ymin=0, ymax=10, colors='green', ls=':', lw=1)
+            else:
+                ax.hist(data, range=[-0.766, -0.566], bins=101, color='skyblue', edgecolor='black')
+                ax.vlines(x=-2/3, ymin=0, ymax=10, colors='green', ls=':', lw=1)
 
             # Set title and labels for each subplot
             if not i % 4:
@@ -628,11 +645,6 @@ def generate_histograms(score_and_timing_data):
             if i < 4:
                 ax.set_title(label_data[i][1][0])
             ax.set_xlabel('Score')
-
-            if instance_key == 1:
-                ax.vlines(x=0, ymin=0, ymax=10, colors='green', ls=':', lw=1)
-            else:
-                ax.vlines(x=-2/3, ymin=0, ymax=10, colors='green', ls=':', lw=1)
 
         # Adjust the layout to prevent overlapping
         plt.tight_layout()
@@ -662,21 +674,21 @@ def plot_shim_stats(shim_stats):
 def main():
 
     # plot_shim_stats({})
-    # # test_two_instances()
+    test_two_instances()
 
-    params = Params()
-
-    file_name_prefix = "graph_" + str(params.GRAPH_NUMBER)
-    data_dir = os.path.join(os.getcwd(), '..', 'data')
-    file_path = os.path.join(data_dir, file_name_prefix + "_blog_post_data_results.pkl")
-
-    if os.path.isfile(file_path):
-        with open(file_path, "rb") as fp:
-            score_and_timing_data = pickle.load(fp)
-    else:   # in this case, there are no results yet, so compute them!
-        score_and_timing_data = run_experiment_for_blog_post(params, file_path)
-
-    generate_histograms(score_and_timing_data=score_and_timing_data)
+    # params = Params()
+    #
+    # file_name_prefix = "graph_" + str(params.GRAPH_NUMBER)
+    # data_dir = os.path.join(os.getcwd(), '..', 'data')
+    # file_path = os.path.join(data_dir, file_name_prefix + "_blog_post_data_results_good.pkl")
+    #
+    # if os.path.isfile(file_path):
+    #     with open(file_path, "rb") as fp:
+    #         score_and_timing_data = pickle.load(fp)
+    # else:   # in this case, there are no results yet, so compute them!
+    #     score_and_timing_data = run_experiment_for_blog_post(params, file_path)
+    #
+    # generate_histograms(score_and_timing_data=score_and_timing_data)
 
 
 if __name__ == "__main__":

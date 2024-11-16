@@ -1,3 +1,6 @@
+import networkx as nx
+
+
 def game_state_to_ising_model(game_state):
     # maps edge state to J value 0, 1 => J = 0; 2 => J = -1 FM; 3 => J = +1 AFM
     edge_state_map = {0: 0, 1: 0, 2: -1, 3: 1}
@@ -30,3 +33,17 @@ def game_state_is_terminal(game_state):
         return True
     else:
         return False
+
+
+def find_isolated_vertices(n_var, base_jay):
+
+    G = nx.Graph()
+    G.add_nodes_from([k for k in range(n_var)])
+    G.add_edges_from([k for k, v in base_jay.items() if v != 0])
+
+    # Find isolated vertices (vertices with no edges)
+    isolated_vertices = list(nx.isolates(G))
+
+    print("Isolated vertices:", isolated_vertices)
+
+    return isolated_vertices

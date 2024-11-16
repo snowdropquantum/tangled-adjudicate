@@ -27,8 +27,8 @@ class Params(object):
         self.NUM_READS_QC = 1000
         self.ANNEAL_TIME_IN_NS = 5
 
-        self.USE_GAUGE_TRANSFORM = True
-
+        self.USE_GAUGE_TRANSFORM = False
         self.USE_SHIM = False
+
         self.ALPHA_PHI = 0.00001
         self.SHIM_ITERATIONS = 10
