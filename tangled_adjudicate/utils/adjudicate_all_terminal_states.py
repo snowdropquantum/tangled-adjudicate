@@ -5,6 +5,7 @@ import os
 import time
 import pickle
 import numpy as np
+
 from tangled_adjudicate.adjudicators.adjudicate import Adjudicator
 from tangled_adjudicate.utils.generate_terminal_states import generate_all_tangled_terminal_states
 from tangled_adjudicate.utils.parameters import Params
@@ -53,20 +54,6 @@ def generate_adjudication_results_for_all_terminal_states(solver_to_use):
         adjudication_results[solver_to_use][k] = getattr(adjudicator, solver_to_use)(v['game_state'])
     print('elapsed time was', round(time.time() - start, precision_digits), 'seconds.')
 
-    # for k, v in game_states.items():
-    #     results[k]['simulated_annealing'].append(adjudicator.simulated_annealing(v['game_state']))
-    # print('elapsed time for simulated annealing was', round(time.time() - start, precision_digits), 'seconds.')
-    # #
-    # # start = time.time()
-    # # for k, v in game_states.items():
-    # #     results[k]['schrodinger_equation'].append(adjudicator.schrodinger_equation(v['game_state']))
-    # # print('elapsed time for schrodinger equation was', round(time.time() - start, precision_digits), 'seconds.')
-    #
-    # start = time.time()
-    # for k, v in game_states.items():
-    #     # results[k]['quantum_annealing'].append(adjudicator.quantum_annealing(v['game_state']))
-    #     adjudication_results[k]['quantum_annealing'].append(adjudicator.quantum_annealing(v))
-    # print('elapsed time for quantum annealing was', round(time.time() - start, precision_digits), 'seconds.')
     # store it -- this should leave any previously loaded solver results intact
     with open(file_path, "wb") as fp:
         pickle.dump(adjudication_results, fp)
