@@ -1,3 +1,4 @@
+""" a place to put utility functions """
 import networkx as nx
 
 
@@ -37,13 +38,11 @@ def game_state_is_terminal(game_state):
 
 def find_isolated_vertices(n_var, base_jay):
 
-    G = nx.Graph()
-    G.add_nodes_from([k for k in range(n_var)])
-    G.add_edges_from([k for k, v in base_jay.items() if v != 0])
+    my_graph = nx.Graph()
+    my_graph.add_nodes_from([k for k in range(n_var)])
+    my_graph.add_edges_from([k for k, v in base_jay.items() if v != 0])
 
     # Find isolated vertices (vertices with no edges)
-    isolated_vertices = list(nx.isolates(G))
-
-    print("Isolated vertices:", isolated_vertices)
+    isolated_vertices = list(nx.isolates(my_graph))
 
     return isolated_vertices
