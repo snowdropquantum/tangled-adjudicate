@@ -5,10 +5,10 @@
 # The first is that the game graph symmetries are equivalent board positions, and therefore evaluating a specific
 # game board state is the same as evaluating all the equivalent positions at the same time. These symmetries
 # can be used to decimate all terminal states down to unique canonical terminal states -- they are used e.g. to
-# do data augmentation in the AlphaZero agent (evaluating one terminal state automatically gives you P evaluations,
-# where P is the number of automorphisms).
+# do data augmentation in the AlphaZero agent (evaluating one terminal state automatically gives you M evaluations,
+# where M is the number of automorphisms).
 #
-# The second is that the same physical qubits can be used to embed P different equivalent graphs in different
+# The second is that the same physical qubits can be used to embed M different equivalent graphs in different
 # ways. Doing this is important because it 'averages over' the noise that may be present in the physical system.
 
 import os
