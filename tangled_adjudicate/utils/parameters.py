@@ -3,7 +3,7 @@
 
 class Params(object):
     def __init__(self):
-        self.GRAPH_NUMBER = 2   # this is the index of the graph to use; defined in /utils/game_graph_properties.py
+        self.GRAPH_NUMBER = 3   # this is the index of the graph to use; defined in /utils/game_graph_properties.py
         # just a reminder which are which:
         # 1 = 2 vertices
         # 2 = 3 vertices in triangle

@@ -41,7 +41,7 @@ def generate_adjudication_results_for_all_terminal_states(solver_to_use):
         adjudication_results = {}
 
     # at this point, either we have loaded some adjudication_results from an existing file, or we have a new empty dict
-    if solver_to_use in adjudication_results:       # this means we loaded this is already
+    if solver_to_use in adjudication_results:       # this means we loaded this in already
         user_input = input('results already exist, overwrite (y/n)?')
         if user_input.lower() != 'y':
             sys.exit(print('exiting!'))
@@ -58,14 +58,12 @@ def generate_adjudication_results_for_all_terminal_states(solver_to_use):
     with open(file_path, "wb") as fp:
         pickle.dump(adjudication_results, fp)
 
-    print()
-
 
 def main():
 
-    # all_solvers_list = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
-    # solver_list = ['simulated_annealing', 'schrodinger_equation']
-    solver_list = ['quantum_annealing']
+    solver_list = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
+    # solver_list = ['quantum_annealing']
+    # solver_list = ['schrodinger_equation', 'simulated_annealing']
 
     for solver_to_use in solver_list:
         generate_adjudication_results_for_all_terminal_states(solver_to_use)
