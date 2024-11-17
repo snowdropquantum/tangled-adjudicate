@@ -22,15 +22,14 @@ from dwave.system.testing import MockDWaveSampler
 class Adjudicator(object):
     def __init__(self, params):
         self.params = params
-        # if we are using the QC, load embeddings and automorphisms from /data; if they are not there,
-        # compute them for your processor choice
-        if self.params.USE_QC:
+        if self.params.USE_QC:   # if using QC, get embeddings and automorphisms
             self.automorphisms = get_automorphisms(self.params.GRAPH_NUMBER)
             self.embeddings = get_embeddings(self.params.GRAPH_NUMBER, self.params.QC_SOLVER_TO_USE)
 
     def compute_winner_score_and_influence_from_correlation_matrix(self, game_state, correlation_matrix):
         # correlation_matrix is assumed to be symmetric matrix with zeros on diagonal (so that self-correlation of
         # one is not counted) -- this is the standard for computing influence vector
+        #
         # returns:
         # winner: if game_state is terminal, string -- one of 'red' (player 1), 'blue' (player 2), 'draw'
         # if game_state not terminal, returns None
@@ -58,27 +57,30 @@ class Adjudicator(object):
 
         return winner, score, influence_vector
 
+    # all three solver functions input game_state, e.g.:
+    #
+    # game_state = {'num_nodes': 6, 'edges': [(0, 1, 1), (0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 2), (1, 2, 1),
+    # (1, 3, 2), (1, 4, 3), (1, 5, 3), (2, 3, 1), (2, 4, 2), (2, 5, 3), (3, 4, 2), (3, 5, 1), (4, 5, 2)],
+    # 'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1,
+    # 'player1_node': 1, 'player2_node': 3}
+    #
+    # and return a dictionary that contains the following keys:
+    #
+    # 'game_state': a copy of the input game_state dictionary
+    # 'adjudicator': a string, one of 'simulated_annealing', 'quantum_annealing', 'schrodinger_equation'
+    # 'winner': if both players have chosen vertices, a string, one of 'red', 'blue', 'draw', otherwise None
+    # 'score': if both players have chosen vertices, the difference in influence scores as a real number, otherwise None
+    # 'influence_vector': a vector of real numbers of length vertex_count (one real number per vertex in the game graph)
+    # 'correlation_matrix': symmetric real-valued matrix of spin-spin correlations with zeros on diagonals
+    # 'parameters': a copy of the parameters dictionary
+
     def simulated_annealing(self, game_state):
 
-        # this function inputs game_state, e.g.:
-        #
-        # game_state = {'num_nodes': 6, 'edges': [(0, 1, 1), (0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 2), (1, 2, 1),
-        # (1, 3, 2), (1, 4, 3), (1, 5, 3), (2, 3, 1), (2, 4, 2), (2, 5, 3), (3, 4, 2), (3, 5, 1), (4, 5, 2)],
-        # 'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1,
-        # 'player1_node': 1, 'player2_node': 3}
-        #
-        # and returns:
-        #
-        # winner: string, one of 'red', 'blue', 'draw'
-        # score_difference: real number, the score of the game
-        # influence_vector: vector of real numbers of length vertex_count, the influence of each vertex
-
         h, jay = game_state_to_ising_model(game_state)
-
         sampler = neal.SimulatedAnnealingSampler()
 
         # Approx match: (1) mean energy and (2) rate of local excitations for square-lattice high precision spin glass
-        # at 5ns (Advantage2 prototype 2p3)
+        # at 5ns (Advantage2 prototype 2.5)
 
         # Limits relaxation to local minima. Can vary by model/protocol/QPU. Assumes max(|J|) is scaled to 1.
         beta_max = 3
@@ -131,11 +133,13 @@ class Adjudicator(object):
 
     def quantum_annealing(self, game_state):
 
-        number_of_embeddings = len(self.embeddings)                 # e.g. 346
-        # number_of_embeddings = 2               # e.g. 346
+        number_of_embeddings = len(self.embeddings)                 # e.g. P=343
         number_of_problem_variables = game_state['num_nodes']       # e.g. 3
 
         samples = np.zeros((1, number_of_problem_variables))        # 0th layer to get vstack going, remove at the end
+        shim_stats = None
+        all_samples = None
+        indices_of_flips = None
 
         if self.params.USE_MOCK_DWAVE_SAMPLER and self.params.USE_SHIM:
             print('D-Wave mock sampler is not set up to use the shimming process, turn shim off if using mock!')
@@ -149,7 +153,6 @@ class Adjudicator(object):
             base_sampler = DWaveSampler(solver=self.params.QC_SOLVER_TO_USE)
             sampler_kwargs.update({'fast_anneal': True,
                                    'annealing_time': self.params.ANNEAL_TIME_IN_NS / 1000})
-            shim_stats = None
 
         if self.params.USE_SHIM:
             shim_stats = {'qubit_magnetizations': [],
@@ -180,8 +183,8 @@ class Adjudicator(object):
 
         # We now enter a loop where each pass through the loop programs the chip to specific values of h and J but
         # now for the entire chip. We do this by first selecting one automorphism and embedding it in multiple
-        # parallel ways across the entire chip, and then applying a gauge transform across all the qubits used.
-        # This latter process chooses different random gauges for each of the embedded instances.
+        # parallel ways across the entire chip, and then optionally applying a gauge transform across all the qubits
+        # used. This latter process chooses different random gauges for each of the embedded instances.
 
         for chip_run_idx in range(self.params.NUMBER_OF_CHIP_RUNS):
 
@@ -190,12 +193,11 @@ class Adjudicator(object):
             # *******************************************************************
 
             automorphism_to_use = random.choice(self.automorphisms)  # eg {0:0, 1:2, 2:1}
-            # automorphism_to_use = {0: 2, 1: 0, 2: 1}
             inverted_automorphism_to_use = {v: k for k, v in automorphism_to_use.items()}   # swaps key <-> values
 
             permuted_embedding = []
 
-            for each_embedding in self.embeddings[:number_of_embeddings]:    # each_embedding is like [1093, 1098, 136]; 343 for three-vertex graph
+            for each_embedding in self.embeddings[:number_of_embeddings]:    # each_embedding is like [1093, 1098, 136]; 343 of these for three-vertex graph
                 this_embedding = []
                 for each_vertex in range(number_of_problem_variables):    # each_vertex ranges from 0 to 2
                     this_embedding.append(each_embedding[inverted_automorphism_to_use[each_vertex]])
@@ -239,14 +241,11 @@ class Adjudicator(object):
             # Step 3: Choose random gauge, modify h, J parameters for full chip using it
             # **************************************************************************
 
-            # next we want to apply a random gauge transformation. I could do this using the
-            # SpinReversalTransformComposite function, but I'm not exactly sure how it works, so instead I'm going
-            # to just homebrew my own (it's pretty simple, just some bookkeeping to get right). I call the
-            # situation after the gauge transformation has been applied the BLUE with RED STAR situation.
+            # next we optionally apply a random gauge transformation. I call the situation after the gauge
+            # transformation has been applied the BLUE with RED STAR situation.
 
             if self.params.USE_GAUGE_TRANSFORM:
                 flip_map = [random.choice([-1, 1]) for _ in full_h]   # random list of +1, -1 values of len # qubits
-                # flip_map = [-1, 1, -1, 1, 1, -1]   # random list of +1, -1 values of len # qubits
                 indices_of_flips = [i for i, x in enumerate(flip_map) if x == -1]       # the indices of the -1 values
 
                 for edge_key, j_val in full_j.items():              # for each edge and associated J value
@@ -259,15 +258,11 @@ class Adjudicator(object):
             sampler_kwargs.update({'h': full_h,
                                    'J': full_j})
 
-            # # I think this is for making sure the variable order doesn't get screwed up later
-            # bqm = dimod.BinaryQuadraticModel('SPIN').from_ising(full_h, full_j)
+            sampler = FixedEmbeddingComposite(base_sampler, embedding=embedding_to_use)   # applies the embedding
 
-            # applies the desired embedding
-            sampler = FixedEmbeddingComposite(base_sampler, embedding=embedding_to_use)
-
-            # ********************************************************************************
-            # Step 5: Start linear bias terms shimming process in the BLUE with RED STAR basis
-            # ********************************************************************************
+            # *************************************************************************
+            # Step 5: Optionally start shimming process in the BLUE with RED STAR basis
+            # *************************************************************************
 
             # all of this in the BLUE with RED STAR basis, ie post automorph, post gauge transform
             for shim_iteration_idx in range(shim_iterations):
@@ -277,7 +272,6 @@ class Adjudicator(object):
                 # **************************************
 
                 ss = sampler.sample_ising(**sampler_kwargs)
-                # ss = dimod.SampleSet.from_samples_bqm(ss, bqm)    # might not be needed -- to check later
                 all_samples = ss.record.sample
 
                 if self.params.USE_SHIM:
@@ -341,7 +335,7 @@ class Adjudicator(object):
 
         samples = np.delete(samples, (0), axis=0)  # delete first row of zeros
 
-        # replace columns where there are disconnect variables with truly random samples... seems to work?
+        # replace columns where there are disconnected variables with truly random samples
         for idx in isolated_vertices:
             samples[:, idx] = np.random.choice([1, -1], size=samples.shape[0])
 
@@ -359,112 +353,10 @@ class Adjudicator(object):
                              'winner': winner, 'score': score_difference, 'influence_vector': influence_vector,
                              'correlation_matrix': correlation_matrix, 'parameters': self.params}
 
-        # return return_dictionary, shim_stats
         return return_dictionary
-        #
-        #     print()
-        # # ********************************
-        # # Step 1: Balancing qubits at zero
-        # # ********************************
-        # #
-        # # Because we have all h_j=0, the resultant Ising model is of the form H = \sum_ij J_ij s_i s_j. This
-        # # is symmetric under reversal of the signs on all spins +1 <-> -1, which means that every state has a
-        # # symmetric state with the spins reversed, which means that the average value of each spin is zero. In
-        # # other words, if I collect N samples from this Ising model from hardware, if I look at each spin
-        # # independently, if I get an average value <s_j> different from zero this indicates an unwanted analog bias.
-        # # D-Wave exposes a parameter called Flux Bias Offsets (FBOs) that can then be used to compensate for this.
-        #
-        #
-        # # number of automorphisms of the game graph: len(self.automorphisms)
-        # # number of source to target embeddings found: len(self.embeddings)
-        # # number of spin reversal transformations used: self.params.SPIN_REVERSAL_TRANSFORMS
-        # # number of samples taken per call to the processor: self.params.NUM_READS
-        # # for graph_number 2 ==> these are 6, 346, 10, 100 respectively ==> 2,076,000 samples
-        #
-        # # self.embeddings[0] = [1093, 1098, 136]
-        # num_var = len(self.embeddings[0])  # e.g. 3
-        # number_of_automorphisms_P = len(self.automorphisms)  # e.g. 6
-        # number_of_embeddings_to_use_U = len(self.embeddings)  # e.g. 346
-        #
-        # # big_h and big_j are h, jay values for the entire chip assuming the identity automorphism
-        #
-        # big_h = {}
-        # big_j = {}
-        #
-        # for k in range(number_of_embeddings_to_use_U):
-        #     for j in range(num_var):
-        #         big_h[num_var * k + j] = 0
-        #
-        # for k, v in base_jay.items():
-        #     big_j[k] = v
-        #     for j in range(1, number_of_embeddings_to_use_U):
-        #         big_j[(k[0] + num_var * j, k[1] + num_var * j)] = v
-        #
-        # sampler_kwargs = dict(h=big_h,
-        #                       J=big_j,
-        #                       num_reads=self.params.NUM_READS_QC,
-        #                       answer_mode='raw',
-        #                       num_spin_reversal_transforms=self.params.SPIN_REVERSAL_TRANSFORMS)
-        #
-        # if self.params.USE_MOCK_DWAVE_SAMPLER:
-        #     base_sampler = MockDWaveSampler(topology_type='zephyr', topology_shape=[6, 4])
-        #
-        # else:
-        #     base_sampler = DWaveSampler(solver='Advantage2_prototype2.4')
-        #     sampler_kwargs.update({'fast_anneal': True,
-        #                            'annealing_time': self.params.ANNEAL_TIME_IN_NS / 1000})
-        #
-        # # I think this is for making sure the variable order doesn't get screwed up later
-        # bqm = dimod.BinaryQuadraticModel('SPIN').from_ising(big_h, big_j)
-        #
-        # samps = np.zeros((1, num_var))   # first layer of zeros to get vstack going, will remove at the end
-        #
-        # # for each automorphism, we embed using that automorphism into all the available places on the chip, and
-        # # collect N samples
-        #
-        # for automorphism_idx in range(number_of_automorphisms_P):    # ranges from 0 to 5
-        #
-        #     automorphism_to_use = self.automorphisms[automorphism_idx]    # eg {0:0, 1:2, 2:1}
-        #     permuted_embedding = []
-        #     for each_embedding in self.embeddings:    # each_embedding is like [1093, 1098, 136]
-        #         this_embedding = []
-        #         for each_vertex in range(num_var):    # each_vertex ranges from 0 to 2
-        #             this_embedding.append(each_embedding[automorphism_to_use[each_vertex]])
-        #         permuted_embedding.append(this_embedding)
-        #
-        #     embedding_to_use = {}
-        #
-        #     for k in range(number_of_embeddings_to_use_U):
-        #         for j in range(num_var):  # up to 0..1037
-        #             embedding_to_use[num_var * k + j] = [permuted_embedding[k][j]]
-        #
-        #     composed_sampler = (
-        #         SpinReversalTransformComposite(FixedEmbeddingComposite(base_sampler, embedding=embedding_to_use)))
-        #
-        #     ss = composed_sampler.sample_ising(**sampler_kwargs)
-        #     ss = dimod.SampleSet.from_samples_bqm(ss, bqm)
-        #     new_samps = self.ss_to_samps(ss, num_var, number_of_embeddings)
-        #     samps = np.vstack((samps, new_samps))   # stack new_samps from this automorphism
-        #
-        # samps = np.delete(samps, (0), axis=0)   # delete first row of zeros
-        #
-        # sample_count = self.params.NUM_READS_QC * self.params.SPIN_REVERSAL_TRANSFORMS * number_of_embeddings_to_use_U * number_of_automorphisms_P
-        #
-        # # this is a full matrix with zeros on the diagonal that uses all the samples
-        # correlation_matrix = \
-        #     (np.einsum('si,sj->ij', samps, samps) / sample_count -
-        #      np.eye(int(game_state['num_nodes'])))
-        #
-        # winner, score_difference, influence_vector = self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix)
-        #
-        # return_dictionary = {'game_state': game_state, 'adjudicator': 'quantum_annealing',
-        #                      'winner': winner, 'score': score_difference, 'influence_vector': influence_vector,
-        #                      'correlation_matrix': correlation_matrix, 'parameters': self.params}
-        #
-        # return return_dictionary
 
 
-def test_two_instances():
+def test_three_instances():
 
     precision_digits = 3
     np.set_printoptions(precision=precision_digits)    # just to clean up print output
@@ -473,28 +365,24 @@ def test_two_instances():
     params = Params()
     adjudicator = Adjudicator(params=params)
 
-    # solvers_to_use = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
-    solvers_to_use = ['quantum_annealing']
+    solvers_to_use = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
 
     # first game_state is an FM locked thing, so only 1,1,1 and -1,-1,-1 should appear; score should be 0 (draw),
     # correlation matrix should be [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
     # second game_state has 2 FM links and one AFM link, with 6 degenerate states; score should be -2/3 (blue),
     # correlation matrix should be [[0, -1/3, +1/3], [-1/3, 0, +1/3], [+1/3, +1/3, 0]]
+    # third game_state has 1 FM link and two zero links, giving one disconnected qubit; score should be +1 (red),
+    # correlation matrix should be [[0, 1, 0], [1, 0, 0], [0, 0, 0]]
 
-    # game_states = [{'num_nodes': 3, 'edges': [(0, 1, 2), (0, 2, 2), (1, 2, 2)], 'player1_id': 'player1',
-    #                 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
-    #                 'player2_node': 2},
-    #                {'num_nodes': 3, 'edges': [(0, 1, 3), (0, 2, 2), (1, 2, 2)], 'player1_id': 'player1',
-    #                 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
-    #                 'player2_node': 2}]
-
-    game_states = [{'num_nodes': 3, 'edges': [(0, 1, 1), (0, 2, 1), (1, 2, 2)], 'player1_id': 'player1',
+    game_states = [{'num_nodes': 3, 'edges': [(0, 1, 2), (0, 2, 2), (1, 2, 2)], 'player1_id': 'player1',
+                    'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
+                    'player2_node': 2},
+                   {'num_nodes': 3, 'edges': [(0, 1, 3), (0, 2, 2), (1, 2, 2)], 'player1_id': 'player1',
+                    'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
+                    'player2_node': 2},
+                   {'num_nodes': 3, 'edges': [(0, 1, 2), (0, 2, 1), (1, 2, 1)], 'player1_id': 'player1',
                     'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
                     'player2_node': 2}]
-
-    # game_states = [{'num_nodes': 3, 'edges': [(0, 1, 3), (0, 2, 2), (1, 2, 1)], 'player1_id': 'player1',
-    #                 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
-    #                 'player2_node': 2}]
 
     # Note: the D-Wave Mock solver will get Instance 2 wrong as it does not implement an unbiased sampler
 
@@ -674,7 +562,7 @@ def plot_shim_stats(shim_stats):
 def main():
 
     # plot_shim_stats({})
-    test_two_instances()
+    test_three_instances()
 
     # params = Params()
     #
