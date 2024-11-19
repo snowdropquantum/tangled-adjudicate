@@ -37,7 +37,7 @@ def game_state_is_terminal(game_state):
 
 
 def find_isolated_vertices(n_var, base_jay):
-
+    # returns a list of isolated / disconnected vertices if there are any; returns empty list if not
     my_graph = nx.Graph()
     my_graph.add_nodes_from([k for k in range(n_var)])
     my_graph.add_edges_from([k for k, v in base_jay.items() if v != 0])
