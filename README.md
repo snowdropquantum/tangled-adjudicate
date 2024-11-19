@@ -11,14 +11,13 @@ Three different adjudicators are provided:
 
 1. A Schrödinger Equation solver, which is only useful for tiny game graphs
 2. A Simulated Annealing solver, whose parameters are chosen to mimic D-Wave hardware, and 
-3. A Quantum Annealing solver that uses D-Wave hardware using a variant of the calibration refinement process 
-described [here](https://www.frontiersin.org/journals/computer-science/articles/10.3389/fcomp.2023.1238988/full)
+3. A Quantum Annealing solver that uses D-Wave hardware
 
-In addition to the basic adjudicators, we provide several utility functions that support the adjudication process.
+In addition to the adjudicators, I provide several utility functions that support the adjudication process.
 
 ## Setup
 
-Create an empty conda environment with Python 3.10.15, pip install dwave-ocean-sdk matplotlib, open a terminal and
+Create an empty conda environment with Python 3.10, pip install dwave-ocean-sdk matplotlib, open a terminal and
 do the following to set up the D-Wave stuff (you need a Leap account first for this to work, so get one!):
 
 dwave auth login
@@ -55,11 +54,8 @@ game_state = {'num_nodes': 6, 'edges': [(0, 1, 1), (0, 2, 1), (0, 3, 2), (0, 4, 
 'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1,
 'player1_node': 1, 'player2_node': 3}
 
-Certain aspects of the game state must agree with the game graph, including matching vertex count, and all edges
-in the game board graph must have corresponding entries in the 'edges' list of tuples (edge_count must be the same
-as len(game_state['edges'])). If you want to add a new game graph, it's easy to modify the game state dictionary
-corresponding to it -- just make sure the 'num_nodes' is your vertex count and 'edges' includes an entry for each
-edge in your graph.
+If you want to add a new game graph, it's easy to modify the game state dictionary corresponding to it -- just make 
+sure the 'num_nodes' is your vertex count and 'edges' includes an entry for each edge in your graph.
 
 ## Adjudication Output
 
