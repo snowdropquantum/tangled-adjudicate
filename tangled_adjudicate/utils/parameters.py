@@ -21,7 +21,7 @@ class Params(object):
         # samples (N=1000)
 
         self.USE_QC = True              # set to False if you just want to use e.g. simulated annealer
-        self.USE_MOCK_DWAVE_SAMPLER = True   # set to True if you want a software version of the hardware (doesn't sample like the HW tho so don't trust it, just for debugging)
+        self.USE_MOCK_DWAVE_SAMPLER = False   # set to True if you want a software version of the hardware (doesn't sample like the HW tho so don't trust it, just for debugging)
         self.QC_SOLVER_TO_USE = 'Advantage2_prototype2.5'   # modify if you want to use a different QC
 
         self.NUMBER_OF_CHIP_RUNS = 1    # this is M

@@ -17,7 +17,15 @@ In addition to the adjudicators, I provide several utility functions that suppor
 
 ## Setup
 
-Create an empty conda environment with Python 3.10, pip install dwave-ocean-sdk matplotlib, open a terminal and
+Maybe 
+
+python setup.py install
+or
+pip install .
+
+will work? Need to check it out!
+
+If not, create an empty conda environment with Python 3.10, pip install dwave-ocean-sdk matplotlib, open a terminal and
 do the following to set up the D-Wave stuff (you need a Leap account first for this to work, so get one!):
 
 dwave auth login
