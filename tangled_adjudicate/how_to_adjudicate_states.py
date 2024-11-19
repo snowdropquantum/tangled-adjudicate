@@ -10,6 +10,7 @@ from utils.parameters import Params
 from utils.game_graph_properties import GraphProperties
 from utils.generate_terminal_states import convert_state_string_to_game_state
 
+# todo clean this up!
 
 def main():
     # this code shows how to use the three different adjudicators
