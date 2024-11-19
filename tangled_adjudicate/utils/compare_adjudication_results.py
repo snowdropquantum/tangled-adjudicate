@@ -93,15 +93,15 @@ def compare_adjudication_results(graph_number, solvers_to_use):
     if graph_number == 3:
 
         if len(to_plot) == 2:
-            plt.hist(to_plot, range=[-1, 1], bins=400, color=['red', 'blue'], stacked=True)
+            plt.hist(to_plot, range=[-2, 2], bins=400, color=['red', 'blue'], stacked=True)
         else:
-            plt.hist(to_plot, range=[-2, 2], bins=800, color=['red', 'blue', 'cyan'], stacked=True)
+            plt.hist(to_plot, range=[-4, 4], bins=800, color=['red', 'blue', 'cyan'], stacked=True)
 
-        plt.text(1.2, 70, r'Four Vertex Graph', fontsize=12)
-        plt.text(1.2, 65, red_text, fontsize=8)
-        plt.text(1.2, 61, blue_text, fontsize=8)
+        plt.text(2.5, 70, r'Four Vertex Graph', fontsize=12)
+        plt.text(2.5, 65, red_text, fontsize=8)
+        plt.text(2.5, 61, blue_text, fontsize=8)
         if len(solvers_to_use) == 3:
-            plt.text(1.2, 57, cyan_text, fontsize=8)
+            plt.text(2.5, 57, cyan_text, fontsize=8)
         plt.ylim(0, 100)
 
         plt.xlabel('Score')
@@ -116,8 +116,8 @@ def compare_adjudication_results(graph_number, solvers_to_use):
 def main():
 
     solvers_to_use = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
-    # solvers_to_use = ['schrodinger_equation', 'simulated_annealing']
-    for graph_number in range(3, 4):
+
+    for graph_number in range(2, 4):
         compare_adjudication_results(graph_number=graph_number, solvers_to_use=solvers_to_use)
 
 
