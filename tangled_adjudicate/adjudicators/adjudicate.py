@@ -1,19 +1,14 @@
 """ Adjudicator class for Tangled game states using Schrödinger Equation, Simulated Annealing, and D-Wave hardware """
-import sys
-import os
-import time
-import pickle
 import random
 import neal
-import dimod
+# import dimod
 import numpy as np
-import matplotlib.pyplot as plt
 
 from tangled_adjudicate.utils.utilities import game_state_to_ising_model, game_state_is_terminal, find_isolated_vertices
 from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
 from tangled_adjudicate.utils.find_hardware_embeddings import get_embeddings
-from tangled_adjudicate.schrodinger.schrodinger_functions import evolve_schrodinger
 from tangled_adjudicate.utils.parameters import Params
+from tangled_adjudicate.schrodinger.schrodinger_functions import evolve_schrodinger
 
 from dwave.system import DWaveSampler, FixedEmbeddingComposite
 from dwave.system.testing import MockDWaveSampler
@@ -320,8 +315,7 @@ class Adjudicator(object):
             # Step 9: Reorder columns to make them BLACK order instead of BLUE order
             # **********************************************************************
 
-            all_samples_processed_black = all_samples_processed_blue[:,
-                                          [automorphism_to_use[i] for i in range(all_samples_processed_blue.shape[1])]]
+            all_samples_processed_black = all_samples_processed_blue[:, [automorphism_to_use[i] for i in range(all_samples_processed_blue.shape[1])]]
 
             # *********************************************************
             # Step 10: Add new samples to the stack, all in BLACK order
@@ -354,230 +348,3 @@ class Adjudicator(object):
                              'correlation_matrix': correlation_matrix, 'parameters': self.params}
 
         return return_dictionary
-
-
-def test_three_instances():
-
-    precision_digits = 3
-    np.set_printoptions(precision=precision_digits)    # just to clean up print output
-    np.set_printoptions(suppress=True)                 # remove scientific notation
-
-    params = Params()
-    adjudicator = Adjudicator(params=params)
-
-    solvers_to_use = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
-
-    # first game_state is an FM locked thing, so only 1,1,1 and -1,-1,-1 should appear; score should be 0 (draw),
-    # correlation matrix should be [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
-    # second game_state has 2 FM links and one AFM link, with 6 degenerate states; score should be -2/3 (blue),
-    # correlation matrix should be [[0, -1/3, +1/3], [-1/3, 0, +1/3], [+1/3, +1/3, 0]]
-    # third game_state has 1 FM link and two zero links, giving one disconnected qubit; score should be +1 (red),
-    # correlation matrix should be [[0, 1, 0], [1, 0, 0], [0, 0, 0]]
-
-    game_states = [{'num_nodes': 3, 'edges': [(0, 1, 2), (0, 2, 2), (1, 2, 2)], 'player1_id': 'player1',
-                    'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
-                    'player2_node': 2},
-                   {'num_nodes': 3, 'edges': [(0, 1, 3), (0, 2, 2), (1, 2, 2)], 'player1_id': 'player1',
-                    'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
-                    'player2_node': 2},
-                   {'num_nodes': 3, 'edges': [(0, 1, 2), (0, 2, 1), (1, 2, 1)], 'player1_id': 'player1',
-                    'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
-                    'player2_node': 2}]
-
-    # Note: the D-Wave Mock solver will get Instance 2 wrong as it does not implement an unbiased sampler
-
-    for solver_to_use in solvers_to_use:
-        cnt = 0
-        for game_state in game_states:
-
-            start = time.time()
-
-            results, shim_stats = getattr(adjudicator, solver_to_use)(game_state)
-
-            print('*******************************************')
-            print('using the', solver_to_use, 'solver on Instance', cnt + 1)
-            print('using parameters M=', params.NUMBER_OF_CHIP_RUNS, 'N=', params.NUM_READS_QC,
-                  'USE_SHIM=', params.USE_SHIM, 'USE_GAUGE_TRANSFORM=', params.USE_GAUGE_TRANSFORM,
-                  'S=', params.SHIM_ITERATIONS)
-            print('run took', round(time.time() - start, precision_digits), 'seconds.')
-            print('score was:', round(results['score'], precision_digits))
-            print('winner:', results['winner'])
-            print('correlation matrix:')
-            print(np.array(results['correlation_matrix']))
-            print('*******************************************')
-
-            # plot_shim_stats(shim_stats)
-
-            cnt += 1
-
-
-def run_experiment_for_blog_post(params, file_path):
-
-    number_of_scores_computed_per_parameter_setting = 20
-
-    precision_digits = 3
-    np.set_printoptions(precision=precision_digits)    # just to clean up print output
-    np.set_printoptions(suppress=True)                 # remove scientific notation
-
-    # first game_state is an FM locked thing, so only 1,1,1 and -1,-1,-1 should appear; score should be 0 (draw),
-    # correlation matrix should be [[0, 1, 1], [1, 0, 1], [1, 1, 0]]
-    # second game_state has 2 FM links and one AFM link, with 6 degenerate states; score should be -2/3 (blue),
-    # correlation matrix should be [[0, -1/3, +1/3], [-1/3, 0, +1/3], [+1/3, +1/3, 0]]
-
-    game_states = [{'num_nodes': 3, 'edges': [(0, 1, 2), (0, 2, 2), (1, 2, 2)], 'player1_id': 'player1',
-                    'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
-                    'player2_node': 2},
-                   {'num_nodes': 3, 'edges': [(0, 1, 3), (0, 2, 2), (1, 2, 2)], 'player1_id': 'player1',
-                    'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1, 'player1_node': 1,
-                    'player2_node': 2}]
-
-    # # m_and_n_list = [(50, 1), (10, 5), (5, 10), (1, 50)]
-    # m_and_n_list = [(8, 1), (4, 2), (2, 4), (1, 8)]
-    # # s_list = [1, 10]
-    # s_list = [1, 10]
-    #
-    # use_gauge_list = [False, True]
-
-    m_and_n_list = [(1, 100)]
-    s_list = [1]
-    use_gauge_list = [True]
-
-    instance_idx = 1
-
-    score_and_timing_data = {}
-
-    for game_state in game_states:
-        score_and_timing_data[instance_idx] = {}
-
-        for m_and_n_values in m_and_n_list:
-            score_and_timing_data[instance_idx][m_and_n_values] = {}
-
-            params.NUMBER_OF_CHIP_RUNS = m_and_n_values[0]
-            params.NUM_READS_QC = m_and_n_values[1]
-
-            for s in s_list:
-                score_and_timing_data[instance_idx][m_and_n_values][s] = {}
-
-                if s == 1:
-                    params.USE_SHIM = False
-                else:
-                    params.USE_SHIM = True
-                    params.SHIM_ITERATIONS = s
-
-                for use_gauge in use_gauge_list:
-                    score_and_timing_data[instance_idx][m_and_n_values][s][use_gauge] = []
-
-                    params.USE_GAUGE_TRANSFORM = use_gauge
-                    adjudicator = Adjudicator(params=params)
-
-                    score_data = []
-                    timing_data = []
-
-                    for _ in range(number_of_scores_computed_per_parameter_setting):
-                        start = time.time()
-                        results = adjudicator.quantum_annealing(game_state)
-                        score_data.append(results['score'])
-                        timing_data.append(time.time() - start)
-
-                    print('*******************************************')
-                    print('with parameters', m_and_n_values, s, use_gauge, 'on Instance', instance_idx)
-                    print('average time was', round(sum(timing_data)/number_of_scores_computed_per_parameter_setting, precision_digits), 'seconds.')
-                    print('scores were:', np.array(score_data))
-                    print('*******************************************')
-
-                    score_and_timing_data[instance_idx][m_and_n_values][s][use_gauge].append(score_data)
-                    score_and_timing_data[instance_idx][m_and_n_values][s][use_gauge].append(sum(timing_data)/number_of_scores_computed_per_parameter_setting)
-        instance_idx += 1
-
-    with open(file_path, "wb") as fp:
-        pickle.dump(score_and_timing_data, fp)
-
-    return score_and_timing_data
-
-
-def generate_histograms(score_and_timing_data):
-
-    for instance_key, instance_value in score_and_timing_data.items():
-
-        # Create a new 4x4 grid of subplots for each instance
-        fig, axes = plt.subplots(4, 4, figsize=(10, 10))
-
-        # Flatten the 4x4 grid for easy iteration
-        axes = axes.flatten()
-
-        score_data = []
-        timing_data = []
-        label_data = []
-
-        for m_and_n_key, m_and_n_value in score_and_timing_data[instance_key].items():
-            for s_key, s_value in score_and_timing_data[instance_key][m_and_n_key].items():
-                for gauge_key, gauge_value in score_and_timing_data[instance_key][m_and_n_key][s_key].items():
-                    score_data.append(score_and_timing_data[instance_key][m_and_n_key][s_key][gauge_key][0])
-                    timing_data.append(score_and_timing_data[instance_key][m_and_n_key][s_key][gauge_key][1])
-                    label_data.append([['M:' + str(m_and_n_key[0]) + ' N:' + str(m_and_n_key[1])],
-                                       ['S:' + str(s_key) + ' G:' + str(gauge_key)]])
-        for i, ax in enumerate(axes):
-            # Generate some random data (for example, normal distribution)
-            data = score_data[i]
-
-            if instance_key == 1:
-                ax.hist(data, range=[-0.01, 0.01], bins=101, color='skyblue', edgecolor='black')
-                ax.vlines(x=0, ymin=0, ymax=10, colors='green', ls=':', lw=1)
-            else:
-                ax.hist(data, range=[-0.766, -0.566], bins=101, color='skyblue', edgecolor='black')
-                ax.vlines(x=-2/3, ymin=0, ymax=10, colors='green', ls=':', lw=1)
-
-            # Set title and labels for each subplot
-            if not i % 4:
-                ax.set_ylabel(label_data[i][0][0])
-            if i < 4:
-                ax.set_title(label_data[i][1][0])
-            ax.set_xlabel('Score')
-
-        # Adjust the layout to prevent overlapping
-        plt.tight_layout()
-        plt.show()
-
-
-def plot_shim_stats(shim_stats):
-
-    # this was obtained from a run on the 'num_nodes': 3, 'edges': [(0, 1, 3), (0, 2, 2), (1, 2, 2)] instance
-    # first 10 iterations no shimming, then 40 more with, last 10 of which are plotted here
-    fig, axes = plt.subplots(1, 1, figsize=(10, 5))
-
-    shim_stats['average_absolute_value_of_magnetization'] = [0.10814771622934889, 0.10826239067055393, 0.1102818270165209, 0.11273858114674443, 0.10896404275996113, 0.11055587949465501, 0.11308843537414967, 0.10874829931972789, 0.10925364431486882, 0.11073275024295433, 0.10615743440233238, 0.08552769679300291, 0.07585034013605443, 0.06724198250728863, 0.05812827988338193, 0.05728668610301264, 0.05562487852283772, 0.05186005830903791, 0.0526569484936832, 0.05058697764820214, 0.04690379008746356, 0.05048979591836735, 0.04924586977648203, 0.047471331389698744, 0.04947716229348883, 0.04630320699708455, 0.04893488824101069, 0.05095043731778426, 0.04984450923226434, 0.05010495626822158, 0.04937026239067056, 0.049125364431486886, 0.04987172011661808, 0.04875413022351798, 0.04630903790087464, 0.05062779397473276, 0.048464528668610306, 0.04921671525753159, 0.047152575315840634, 0.050534499514091356, 0.047959183673469394, 0.04811856171039845, 0.04725558794946551, 0.04656948493683188, 0.05002137998056366, 0.05048979591836735, 0.048800777453838685, 0.05110398445092323, 0.05287269193391643, 0.04948299319727892]
-    colors = ['orange', 'skyblue']
-    data = {0: shim_stats['average_absolute_value_of_magnetization'][:10],
-            1: shim_stats['average_absolute_value_of_magnetization'][40:]}
-    axes.hist(data[0], range=[0, 0.2], bins=50, color=colors[0], label='First 10 Runs Before Shim', edgecolor='black')
-    axes.hist(data[1], range=[0, 0.2], bins=50, color=colors[1], label='Last 10 Runs of Shim', edgecolor='black')
-
-    axes.set_xlabel('Mean Absolute Value of Qubit Magnetizations')
-    axes.legend(prop={'size': 10})
-    # Adjust the layout to prevent overlapping
-    plt.tight_layout()
-    plt.show()
-
-
-def main():
-
-    # plot_shim_stats({})
-    test_three_instances()
-
-    # params = Params()
-    #
-    # file_name_prefix = "graph_" + str(params.GRAPH_NUMBER)
-    # data_dir = os.path.join(os.getcwd(), '..', 'data')
-    # file_path = os.path.join(data_dir, file_name_prefix + "_blog_post_data_results_good.pkl")
-    #
-    # if os.path.isfile(file_path):
-    #     with open(file_path, "rb") as fp:
-    #         score_and_timing_data = pickle.load(fp)
-    # else:   # in this case, there are no results yet, so compute them!
-    #     score_and_timing_data = run_experiment_for_blog_post(params, file_path)
-    #
-    # generate_histograms(score_and_timing_data=score_and_timing_data)
-
-
-if __name__ == "__main__":
-    sys.exit(main())
