@@ -3,8 +3,8 @@ Tangled is a game designed such that determining who wins is a problem where the
 can read all about it [here](https://www.snowdropquantum.com/blog/play-the-game-8e7fb).
 
 This repo contains what I call **_adjudicators_**, which are functions that take as input a Tangled game state and 
-output information derived from it for that game state, including the score and the outcome of the game (win/loss/draw)
-if the game state is a terminal state.
+output information derived from it, including the score and the outcome of the game (win/loss/draw) if the game state 
+is a terminal state.
 
 Three different adjudicators are provided:
 
@@ -16,16 +16,10 @@ In addition to the adjudicators, I provide several utility functions that suppor
 
 ## Setup
 
-Create an empty conda environment with Python 3.10, pip install dwave-ocean-sdk matplotlib, open a terminal and
-do the following to set up the D-Wave stuff (you need a Leap account first for this to work, so get one!):
+Create a virtual environment with Python 3.10, pip install dwave-ocean-sdk matplotlib.
 
-`dwave auth login`
-
-`dwave setup --auth`
-
-`dwave config create --auto-token`
-
-The full D-Wave setup instructions are [here](https://docs.ocean.dwavesys.com/en/stable/docs_cli.html).
+[Follow the D-Wave setup instructions](https://docs.ocean.dwavesys.com/en/stable/docs_cli.html) if you want to use the 
+QC hardware; if not (for example you just want to use simulated annealing) you don't have to do this.
 
 ## Tangled Game Graph Specification
 
