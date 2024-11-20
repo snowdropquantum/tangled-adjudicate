@@ -16,10 +16,27 @@ In addition to the adjudicators, I provide several utility functions that suppor
 
 ## Setup
 
-Create a virtual environment with Python 3.10, pip install dwave-ocean-sdk matplotlib.
+Git clone the repo, create a virtual environment, and install the package in editable mode into it, which links the 
+repository directory directly:
+```bash
+# Clone the repository
+git clone https://github.com/snowdropquantum/tangled-adjudicate.git
 
-[Follow the D-Wave setup instructions](https://docs.ocean.dwavesys.com/en/stable/getting_started.html) if you plan to 
-use QC hardware; if not (for example you just want to use simulated annealing) you don't have to do this.
+# Navigate into the project directory
+cd <repository-directory>
+
+# Install the package
+pip install -e .
+```
+
+Once installed, you can import this package in your Python scripts:
+```python
+import tangled-adjudicate
+```
+If you are going to use QC hardware, 
+[follow the D-Wave setup instructions](https://docs.ocean.dwavesys.com/en/stable/getting_started.html). If not (for 
+example you just want to use simulated annealing) you don't have to do this.
+
 
 ## Tangled Game Graph Specification
 
@@ -44,7 +61,7 @@ is green (ferromagnetic coupling, J=-1); and 3 if the edge is purple (antiferrom
 
 Here's an example:
 
-```
+```python
 game_state = {'num_nodes': 6, 'edges': [(0, 1, 1), (0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 2), (1, 2, 1),
 (1, 3, 2), (1, 4, 3), (1, 5, 3), (2, 3, 1), (2, 4, 2), (2, 5, 3), (3, 4, 2), (3, 5, 1), (4, 5, 2)],
 'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1,
@@ -71,7 +88,7 @@ Adjudicators output a dictionary with the following keys:
 See /utils/how_to_adjudicate_states.py for minimal examples of use. For example, to use the simulated_annealing
 adjudicator (assuming graph 2, which this game state is defined on), you'd just do:
 
-```
+```python
 from tangled_adjudicate.adjudicators.adjudicate import Adjudicator
 from tangled_adjudicate.utils.parameters import Params
 
