@@ -16,8 +16,8 @@ In addition to the adjudicators, I provide several utility functions that suppor
 
 ## Setup
 
-Git clone the repo, create a virtual environment, and install the package in editable mode into it, which links the 
-repository directory directly:
+Git clone the repo, create a virtual environment running Python 3.10, and install the package in editable mode into it, 
+which links the repository directory directly:
 ```bash
 # Clone the repository
 git clone https://github.com/snowdropquantum/tangled-adjudicate.git
@@ -31,7 +31,7 @@ pip install -e .
 
 Once installed, you can import this package in your Python scripts:
 ```python
-import tangled-adjudicate
+import tangled_adjudicate
 ```
 If you are going to use QC hardware, 
 [follow the D-Wave setup instructions](https://docs.ocean.dwavesys.com/en/stable/getting_started.html). If not (for 
@@ -100,4 +100,6 @@ game_state = {'num_nodes': 3, 'edges': [(0, 1, 2), (0, 2, 2), (1, 2, 2)],
               'current_player_index': 1, 'player1_node': 1, 'player2_node': 2}
 
 results = adjudicator.simulated_annealing(game_state)
+
+print(results)
 ```
