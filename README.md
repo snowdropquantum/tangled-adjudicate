@@ -18,8 +18,8 @@ In addition to the adjudicators, I provide several utility functions that suppor
 
 Create a virtual environment with Python 3.10, pip install dwave-ocean-sdk matplotlib.
 
-[Follow the D-Wave setup instructions](https://docs.ocean.dwavesys.com/en/stable/docs_cli.html) if you want to be able
-to use the QC hardware; if not (for example you just want to use simulated annealing) you don't have to do this.
+[Follow the D-Wave setup instructions](https://docs.ocean.dwavesys.com/en/stable/getting_started.html) if you plan to 
+use QC hardware; if not (for example you just want to use simulated annealing) you don't have to do this.
 
 ## Tangled Game Graph Specification
 
