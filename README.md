@@ -3,7 +3,7 @@ Tangled is a game designed such that determining who wins is a problem where the
 can read about it [here](https://www.snowdropquantum.com/blog/play-the-game-8e7fb).
 
 This repo contains what I call **_adjudicators_**, which are functions that take as input a Tangled game state and 
-output information derived from it (see below fo particulars), including the score and the outcome of the game 
+output information derived from it (see below for particulars), including the score and the outcome of the game 
 (win/loss/draw) if the game state is a terminal state.
 
 Three different adjudicators are provided:
