@@ -52,8 +52,7 @@ def main():
 
         start = time.time()
 
-        # this is equivalent to e.g. results = adjudicator.simulated_annealing(example_game_state), which
-        # is probably the way you will use it!
+        # equivalent to e.g. results = adjudicator.simulated_annealing(example_game_state)
         results = getattr(adjudicator, solver_to_use)(example_game_state)
 
         print('elapsed time for', solver_to_use, 'was', round(time.time() - start, precision_digits), 'seconds.')

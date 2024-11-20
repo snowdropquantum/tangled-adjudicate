@@ -44,10 +44,10 @@ is green (ferromagnetic coupling, J=-1); and 3 if the edge is purple (antiferrom
 
 Here's an example:
 
-game_state = {'num_nodes': 6, 'edges': [(0, 1, 1), (0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 2), (1, 2, 1),
+`game_state = {'num_nodes': 6, 'edges': [(0, 1, 1), (0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 2), (1, 2, 1),
 (1, 3, 2), (1, 4, 3), (1, 5, 3), (2, 3, 1), (2, 4, 2), (2, 5, 3), (3, 4, 2), (3, 5, 1), (4, 5, 2)],
 'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1,
-'player1_node': 1, 'player2_node': 3}
+'player1_node': 1, 'player2_node': 3}`
 
 If you want to add a new game graph, it's easy to modify the game state dictionary corresponding to it -- just make 
 sure the 'num_nodes' is your vertex count and 'edges' includes an entry for each edge in your graph.
@@ -63,3 +63,23 @@ Adjudicators output a dictionary with the following keys:
 * 'influence_vector': a vector of real numbers of length vertex_count (one real number per vertex in the game graph)
 * 'correlation_matrix': symmetric real-valued matrix of spin-spin correlations with zeros on diagonals
 * 'parameters': a copy of the parameters dictionary
+
+## Minimal Use Example
+
+See /utils/how_to_adjudicate_states.py for minimal examples of use. For example, to use the simulated_annealing
+adjudicator, you'd just do
+
+`from tangled_adjudicate.adjudicators.adjudicate import Adjudicator`
+
+`from tangled_adjudicate.utils.parameters import Params`
+
+`params = Params()`
+
+`adjudicator = Adjudicator(params)`
+
+`game_state = {'num_nodes': 6, 'edges': [(0, 1, 1), (0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 2), (1, 2, 1),
+(1, 3, 2), (1, 4, 3), (1, 5, 3), (2, 3, 1), (2, 4, 2), (2, 5, 3), (3, 4, 2), (3, 5, 1), (4, 5, 2)],
+'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': 17, 'current_player_index': 1,
+'player1_node': 1, 'player2_node': 3}`
+
+`results = adjudicator.simulated_annealing(game_state)`
