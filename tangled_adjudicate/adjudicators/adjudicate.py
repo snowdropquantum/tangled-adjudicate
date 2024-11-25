@@ -6,7 +6,6 @@ import numpy as np
 from tangled_adjudicate.utils.utilities import game_state_to_ising_model, game_state_is_terminal, find_isolated_vertices
 from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
 from tangled_adjudicate.utils.find_hardware_embeddings import get_embeddings
-from tangled_adjudicate.utils.parameters import Params
 from tangled_adjudicate.schrodinger.schrodinger_functions import evolve_schrodinger
 
 from dwave.system import DWaveSampler, FixedEmbeddingComposite
