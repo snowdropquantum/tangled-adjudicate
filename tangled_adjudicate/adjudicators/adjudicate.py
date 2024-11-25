@@ -1,7 +1,6 @@
 """ Adjudicator class for Tangled game states using Schrödinger Equation, Simulated Annealing, and D-Wave hardware """
 import random
 import neal
-# import dimod
 import numpy as np
 
 from tangled_adjudicate.utils.utilities import game_state_to_ising_model, game_state_is_terminal, find_isolated_vertices
