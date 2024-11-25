@@ -103,3 +103,27 @@ results = adjudicator.simulated_annealing(game_state)
 
 print(results)
 ```
+
+If you only want to use the simulated annealing adjudicator (for example for an online Monte Carlo Tree Search agent), 
+you don't need all the parameters in /utils/parameters.py. You only need to pass the following three parameters:
+
+```python
+from tangled_adjudicate.adjudicators.adjudicate import Adjudicator
+
+class MinimalAdjudicationParameters(object):
+    def __init__(self):
+        self.EPSILON = 0.5
+        self.USE_QC = False
+        self.NUM_READS_SA = 1000
+
+params = MinimalAdjudicationParameters()
+adjudicator = Adjudicator(params)
+
+game_state = {'num_nodes': 3, 'edges': [(0, 1, 2), (0, 2, 2), (1, 2, 2)],
+              'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': 5,
+              'current_player_index': 1, 'player1_node': 1, 'player2_node': 2}
+
+results = adjudicator.simulated_annealing(game_state)
+
+print(results)
+```
