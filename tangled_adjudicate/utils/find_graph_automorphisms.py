@@ -62,7 +62,7 @@ def generate_list_of_automorphisms(vertex_count, edge_list, max_automorphisms_to
     return automorphisms_list
 
 
-def get_automorphisms(graph_number):
+def get_automorphisms(graph_number, data_dir):
     # returns automorphisms for the graph corresponding to the graph_number you want (graph_number is the index of
     # your graph as defined in /utils/game_graph_properties.py, default 1 through 10, but you can add new ones if
     # you want -- if you do, I'd suggest indexing your new graphs starting at 11 so you don't accidentally confuse
@@ -84,8 +84,6 @@ def get_automorphisms(graph_number):
     max_automorphisms_to_return = 500000                    # either an integer, or None if you want all of them
 
     file_name = 'automorphisms_graph_number_' + str(graph_number) + '_max_' + str(max_automorphisms_to_return) + '.pkl'
-
-    data_dir = os.path.join(os.getcwd(), '..', 'data')      # checks to see if /data exists; if not, creates it
 
     if not os.path.isdir(data_dir):
         os.mkdir(data_dir)

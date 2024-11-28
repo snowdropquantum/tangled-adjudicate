@@ -6,6 +6,7 @@ import pickle
 import math
 import ast
 import numpy as np
+
 from tangled_adjudicate.utils.game_graph_properties import GraphProperties
 from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
 
@@ -44,7 +45,8 @@ def generate_all_tangled_terminal_states(graph_number):
     # for graph_number 1, 2, 3, 4, but 5 and up get stupidly large.
 
     graph = GraphProperties(graph_number)
-    data_dir = os.path.join(os.getcwd(), '..', 'data')
+    script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
+    data_dir = os.path.join(script_dir, '..', 'data')
     file_path = os.path.join(data_dir,
                              "graph_" + str(graph_number) + "_unique_terminal_states.pkl")
 
@@ -60,7 +62,7 @@ def generate_all_tangled_terminal_states(graph_number):
             sys.exit(print('exiting...'))
         print('***************************')
 
-        list_of_automorphisms = get_automorphisms(graph_number)
+        list_of_automorphisms = get_automorphisms(graph_number, data_dir=data_dir)
 
         possible_vertex_states = []
         for positions in itertools.permutations(range(graph.vertex_count), 2):

@@ -1,4 +1,5 @@
 """ Adjudicator class for Tangled game states using Schrödinger Equation, Simulated Annealing, and D-Wave hardware """
+import os
 import random
 import neal
 import numpy as np
@@ -15,8 +16,9 @@ from dwave.system.testing import MockDWaveSampler
 class Adjudicator(object):
     def __init__(self, params):
         self.params = params
+        script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
         if self.params.USE_QC:   # if using QC, get embeddings and automorphisms
-            self.automorphisms = get_automorphisms(self.params.GRAPH_NUMBER)
+            self.automorphisms = get_automorphisms(self.params.GRAPH_NUMBER, data_dir=os.path.join(script_dir, '..', 'data'))
             self.embeddings = get_embeddings(self.params.GRAPH_NUMBER, self.params.QC_SOLVER_TO_USE)
 
     def compute_winner_score_and_influence_from_correlation_matrix(self, game_state, correlation_matrix):
