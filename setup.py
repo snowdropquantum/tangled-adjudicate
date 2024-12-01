@@ -9,5 +9,5 @@ setup(
     author='Geordie Rose',
     author_email='geordie@snowdropquantum.com',
     description='Tangled adjudicators',
-    install_requires=['dwave-ocean-sdk', 'matplotlib']
+    install_requires=['dwave-ocean-sdk', 'matplotlib', 'gdown']
 )
