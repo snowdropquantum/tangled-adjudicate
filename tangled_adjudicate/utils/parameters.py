@@ -1,6 +1,5 @@
 """ adjudication and support parameters """
 
-
 class Params(object):
     def __init__(self):
         self.GRAPH_NUMBER = 2   # this is the index of the graph to use; defined in /utils/game_graph_properties.py
