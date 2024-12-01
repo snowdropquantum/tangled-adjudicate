@@ -13,11 +13,12 @@ from tangled_adjudicate.utils.generate_terminal_states import convert_state_stri
 
 
 def main():
-    # this code shows how to use the three different adjudicators
+    # this code shows how to use the four different adjudicators
     # there are two example_game_state dictionaries provided, which are terminal states in graph_number 2 and 3
     # respectively, that are of the sort that are closest to the draw line at score = +- 1/2
 
-    solver_list = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
+    # solver_list = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing', 'look_up']
+    solver_list = ['simulated_annealing', 'lookup_table']
 
     precision_digits = 4    # just to clean up print output
     np.set_printoptions(suppress=True)   # remove scientific notation
@@ -56,15 +57,26 @@ def main():
         results = getattr(adjudicator, solver_to_use)(example_game_state)
 
         print('elapsed time for', solver_to_use, 'was', round(time.time() - start, precision_digits), 'seconds.')
-        print('correlation matrix:')
-        print(np.round(results['correlation_matrix'], precision_digits))
+
+        if results['correlation_matrix'] is None:
+            print('correlation matrix:', None)
+        else:
+            print('correlation matrix:')
+            print(np.round(results['correlation_matrix'], precision_digits))
+
         print('winner:', results['winner'])
+
         if results['score'] is None:
             print('score:', results['score'])
         else:
             print('score:', round(results['score'], precision_digits))
-        print('influence vector:', [round(results['influence_vector'][k], precision_digits)
-                                    for k in range(len(results['influence_vector']))])
+
+        if results['influence_vector'] is None:
+            print('influence vector:', None)
+        else:
+            print('influence vector:', [round(results['influence_vector'][k], precision_digits)
+                                        for k in range(len(results['influence_vector']))])
+
         print()
 
 
