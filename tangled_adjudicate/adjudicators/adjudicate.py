@@ -1,12 +1,18 @@
-""" Adjudicator class for Tangled game states using Schrödinger Equation, Simulated Annealing, and D-Wave hardware """
+""" Adjudicator class for Tangled game states using Schrödinger Equation, Simulated Annealing, D-Wave hardware, and
+Look Up table """
+import sys
 import os
 import random
+import pickle
 import neal
 import numpy as np
 
-from tangled_adjudicate.utils.utilities import game_state_to_ising_model, game_state_is_terminal, find_isolated_vertices
+from tangled_adjudicate.utils.utilities import (game_state_to_ising_model, game_state_is_terminal,
+                                                find_isolated_vertices, get_tso, build_results_dict,
+                                                convert_erik_game_state_to_my_game_state)
 from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
 from tangled_adjudicate.utils.find_hardware_embeddings import get_embeddings
+from tangled_adjudicate.utils.parameters import Params
 from tangled_adjudicate.schrodinger.schrodinger_functions import evolve_schrodinger
 
 from dwave.system import DWaveSampler, FixedEmbeddingComposite
@@ -16,9 +22,9 @@ from dwave.system.testing import MockDWaveSampler
 class Adjudicator(object):
     def __init__(self, params):
         self.params = params
-        script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
+        self.results_dict = None
         if self.params.USE_QC:   # if using QC, get embeddings and automorphisms
-            self.automorphisms = get_automorphisms(self.params.GRAPH_NUMBER, data_dir=os.path.join(script_dir, '..', 'data'))
+            self.automorphisms = get_automorphisms(self.params.GRAPH_NUMBER)
             self.embeddings = get_embeddings(self.params.GRAPH_NUMBER, self.params.QC_SOLVER_TO_USE)
 
     def compute_winner_score_and_influence_from_correlation_matrix(self, game_state, correlation_matrix):
@@ -52,7 +58,7 @@ class Adjudicator(object):
 
         return winner, score, influence_vector
 
-    # all three solver functions input game_state, e.g.:
+    # all four solver functions input game_state, e.g.:
     #
     # game_state = {'num_nodes': 6, 'edges': [(0, 1, 1), (0, 2, 1), (0, 3, 2), (0, 4, 3), (0, 5, 2), (1, 2, 1),
     # (1, 3, 2), (1, 4, 3), (1, 5, 3), (2, 3, 1), (2, 4, 2), (2, 5, 3), (3, 4, 2), (3, 5, 1), (4, 5, 2)],
@@ -346,5 +352,35 @@ class Adjudicator(object):
         return_dictionary = {'game_state': game_state, 'adjudicator': 'quantum_annealing',
                              'winner': winner, 'score': score_difference, 'influence_vector': influence_vector,
                              'correlation_matrix': correlation_matrix, 'parameters': self.params}
+
+        return return_dictionary
+
+    def lookup_table(self, game_state):
+
+        if self.results_dict is None:
+            # If using graphs 2 or 3, you can use precomputed terminal state adjudications (faster for testing)
+            # str(game_state['num_nodes'] - 1) is a hack -- num_nodes=3 is graph 2 and num_nodes=4 is graph 3
+            # as long as both are complete graphs
+            graph_number = game_state['num_nodes'] - 1
+
+            if graph_number not in [2, 3]:
+                sys.exit(print('lookup table only enabled for complete graphs on 3 and 4 vertices.'))
+
+            script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
+
+            file_path = os.path.join(script_dir, '..', 'data',
+                                         'graph_' + str(graph_number) + '_terminal_state_outcomes.pkl')
+            if not os.path.exists(file_path):
+                get_tso(graph_number, file_path)
+            with open(file_path, 'rb') as fp:
+                results = pickle.load(fp)
+            self.results_dict = build_results_dict(results)
+
+        my_state = convert_erik_game_state_to_my_game_state(game_state)
+        winner = self.results_dict[str(my_state)]
+
+        return_dictionary = {'game_state': game_state, 'adjudicator': 'lookup_table',
+                             'winner': winner, 'score': None, 'influence_vector': None,
+                             'correlation_matrix': None, 'parameters': self.params}
 
         return return_dictionary
