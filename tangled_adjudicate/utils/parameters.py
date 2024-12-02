@@ -32,3 +32,10 @@ class Params(object):
 
         self.ALPHA_PHI = 0.00001
         self.SHIM_ITERATIONS = 10
+
+
+class MinimalAdjudicationParameters(object):
+    def __init__(self):
+        self.EPSILON = 0.5              # this is the boundary between a draw and a win
+        self.USE_QC = False
+        self.NUM_READS_SA = 1000        # this is for simulated annealing
