@@ -36,13 +36,13 @@ def convert_state_string_to_game_state(graph, terminal_state_string):
 def generate_all_tangled_terminal_states(graph_number):
     # this loads or generates all possible terminal game states for the graph indexed by graph_number and groups them
     # into lists where each member of the list is connected by an automorphism. Running this function requires either
-    # loading or generating an automorphism file.The dictionary game_states has as its key a string with the canonical
+    # loading or generating an automorphism file. The dictionary game_states has as its key a string with the canonical
     # member of each of these, with the further ['automorphisms'] key being a list of all the states that are symmetries
     # of the canonical key. The key ['game_state'] is the representation of the key as a game_state object.
     #
     # Note that this requires enumerating all possible terminal states, the number of which is
     # (vertex_count choose 2) * 2 * 3**edge_count, which grows exponentially with edge count. You can do this easily
-    # for graph_number 1, 2, 3, 4, but 5 and up get stupidly large.
+    # for graph_number 1, 2, 3, 4, and 11, but the others get stupidly large.
 
     graph = GraphProperties(graph_number)
     script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
@@ -76,63 +76,84 @@ def generate_all_tangled_terminal_states(graph_number):
         elements = [1, 2, 3]
         possible_edge_states = list(itertools.product(elements, repeat=graph.edge_count))
 
-        all_states = [j + list(k) for k in possible_edge_states for j in possible_vertex_states]
+        # all_states is a list of lists enumerating ALL of the game states
+        all_states = [j + list(k) for j in possible_vertex_states for k in possible_edge_states]
 
-        same_group_of_states = {}
+        # this next part creates a dictionary where the keys are each of the elements of all_states and the values are
+        # lists of all the states connected to the key by an automorphism. Note that different automorphisms can lead
+        # to the same state, so at some point the list is converted to a set and then back to a list
 
+        all_states_with_symmetries = {}
+
+        # iterate over all enumerated states
         for state in all_states:
+
+            # # create a key for state
+            # all_states_with_symmetries[str(state)] = []
+
+            # create a list for all the symmetric states
+            list_of_states_connected_by_symmetry = []
+
+            # get indices of the red and blue vertices
             only_vertices = state[:graph.vertex_count]
             red_vertex_index = only_vertices.index(1)
             blue_vertex_index = only_vertices.index(2)
-            same_group_of_states[str(state)] = []
+
+            # iterate over all automorphisms
             for automorph in list_of_automorphisms:
-                new_red_vertex_index = automorph[red_vertex_index]
-                new_blue_vertex_index = automorph[blue_vertex_index]
-                transformed_each = [0] * graph.vertex_count
-                transformed_each[new_red_vertex_index] = 1
-                transformed_each[new_blue_vertex_index] = 2
 
-                edge = np.zeros((graph.vertex_count, graph.vertex_count))
-                new_edge = np.zeros((graph.vertex_count, graph.vertex_count))
-                cnt = graph.vertex_count
-                for j in range(graph.vertex_count):
-                    for i in range(j):
-                        edge[i, j] = state[cnt]
-                        cnt += 1
+                # initialize the state we want to compute (transforming state under automorph)
+                state_transformed_under_automorph = [0] * graph.vertex_count
 
-                cnt = graph.vertex_count
-                for j in range(graph.vertex_count):
-                    for i in range(j):
-                        if automorph[i] < automorph[j]:
-                            new_edge[i, j] = edge[automorph[i], automorph[j]]
-                        else:
-                            new_edge[i, j] = edge[automorph[j], automorph[i]]
-                        cnt += 1
+                # write transformed vertices into the transformed state -- this finishes the vertex part
+                state_transformed_under_automorph[automorph[red_vertex_index]] = 1
+                state_transformed_under_automorph[automorph[blue_vertex_index]] = 2
 
-                for j in range(graph.vertex_count):
-                    for i in range(j):
-                        transformed_each.append(int(new_edge[i, j]))
-                same_group_of_states[str(state)].append(transformed_each)
+                # now we want to transform the edges under the automorphism
+                for edge_idx in range(graph.edge_count):
+                    first_vertex = automorph[graph.edge_list[edge_idx][0]]
+                    second_vertex = automorph[graph.edge_list[edge_idx][1]]
+                    if first_vertex < second_vertex:
+                        transformed_edge = (first_vertex, second_vertex)
+                    else:
+                        transformed_edge = (second_vertex, first_vertex)
 
-        good_states = {}
-        cnt = 0
-        for k, v in same_group_of_states.items():
-            if not cnt % (math.comb(graph.vertex_count, 2) * 2):  # 4 choose 2 = 6 * 2 = 12  ..... 3 choose 2 = 3 *2 = 6   math.comb(graph.vertex_count, 2) * 2
-                good_states[k] = v
-            cnt += 1
+                    transformed_edge_idx = graph.edge_list.index(transformed_edge)
 
-        terminal_states = []
-        for k, v in good_states.items():
-            terminal_states.append(ast.literal_eval(k))
+                    state_transformed_under_automorph.append(state[graph.vertex_count + transformed_edge_idx])
 
-        print('there are', len(terminal_states), 'unique terminal states. Writing to disk ...')
+                list_of_states_connected_by_symmetry.append(str(state_transformed_under_automorph))
+
+            # remove duplicates
+            all_states_with_symmetries[str(state)] = list(dict.fromkeys(list_of_states_connected_by_symmetry))
+
+        # we should now have all the states with all their symmetries, with duplicates removed
+        # we now want to convert this into a list of unique states, by keeping 'canonical' states and removing
+        # keys that are the same state under symmetry.
+
+        # the way I'll do this is to go through each key one by one (they should be ordered) and create 'good key'
+        # and 'bad key' lists.
+
+        unique_terminal_states = []
+        duplicate_states = []
+
+        for k, v in all_states_with_symmetries.items():
+            # the first value in the list of symmetries is the key
+            if v[0] not in duplicate_states:
+                unique_terminal_states.append(v[0])   # string; these should be ordered
+            for value_idx in range(1, len(v)):
+                if v[value_idx] not in duplicate_states:
+                    duplicate_states.append(v[value_idx])
+
+        print('there are', len(unique_terminal_states), 'unique terminal states. Writing to disk ...')
 
         game_states = {}
 
-        for each in terminal_states:
+        # unique_terminal_states is a list of strings, like ['[0, 1, 2, 1, 1]', '[0, 1, 2, 1, 2]', '[0, 1, 2, 1, 3]', ...]
+        for each in unique_terminal_states:
             game_states[str(each)] = {}
-            game_states[str(each)]['game_state'] = convert_state_string_to_game_state(graph, each)
-            game_states[str(each)]['automorphisms'] = good_states[str(each)]
+            game_states[str(each)]['game_state'] = convert_state_string_to_game_state(graph, ast.literal_eval(each))
+            game_states[str(each)]['automorphisms'] = all_states_with_symmetries[each]
 
         data_dir = os.path.join(os.getcwd(), '..', 'data')
 
