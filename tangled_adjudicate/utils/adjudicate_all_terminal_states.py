@@ -58,6 +58,9 @@ def generate_adjudication_results_for_all_terminal_states(solver_to_use):
     with open(file_path, "wb") as fp:
         pickle.dump(adjudication_results, fp)
 
+    # for k, v in adjudication_results['simulated_annealing'].items():
+    #     print('here are the unique terminal states and their adjudications:')
+    #     print(k, v['winner'])
 
 def main():
 
