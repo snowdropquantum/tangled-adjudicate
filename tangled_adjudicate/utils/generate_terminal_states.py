@@ -64,6 +64,8 @@ def generate_all_tangled_terminal_states(graph_number):
 
         list_of_automorphisms = get_automorphisms(graph_number, data_dir=data_dir)
 
+        print('there are', len(list_of_automorphisms), 'automorphisms for this graph.')
+
         possible_vertex_states = []
         for positions in itertools.permutations(range(graph.vertex_count), 2):
             lst = [0] * graph.vertex_count
