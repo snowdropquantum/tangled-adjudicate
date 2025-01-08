@@ -2,7 +2,7 @@
 
 class Params(object):
     def __init__(self):
-        self.GRAPH_NUMBER = 2   # this is the index of the graph to use; defined in /utils/game_graph_properties.py
+        self.GRAPH_NUMBER = 3   # this is the index of the graph to use; defined in /utils/game_graph_properties.py
         # just a reminder which are which:
         # 1 = 2 vertices
         # 2 = 3 vertices in triangle
@@ -13,7 +13,7 @@ class Params(object):
 
         self.EPSILON = 0.5              # this is the boundary between a draw and a win
 
-        self.NUM_READS_SA = 1000        # this is for simulated annealing
+        self.NUM_READS_SA = 10000        # this is for simulated annealing
 
         # These are parameters related to the use of QC hardware, if you're not using QC you can just leave these
         # The defaults here are no shimming, no gauge transforms, only use M=1 automorphism, and collect a lot of
