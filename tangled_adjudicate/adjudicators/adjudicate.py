@@ -19,7 +19,7 @@ from dwave.system import DWaveSampler, FixedEmbeddingComposite
 from dwave.system.testing import MockDWaveSampler
 
 
-class Adjudicator(object):
+class old_Adjudicator(object):
     def __init__(self, params):
         self.params = params
         self.results_dict = None
