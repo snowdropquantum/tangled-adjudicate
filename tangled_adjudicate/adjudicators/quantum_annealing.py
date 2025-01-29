@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Any, List, Optional
 import numpy as np
 from dataclasses import dataclass
@@ -7,6 +8,7 @@ from dwave.system.testing import MockDWaveSampler
 from ..utils.find_graph_automorphisms import get_automorphisms
 from ..utils.find_hardware_embeddings import get_embeddings
 from .adjudicator import Adjudicator, GameState, AdjudicationResult
+
 
 @dataclass
 class QAParameters:
@@ -21,6 +23,8 @@ class QAParameters:
     use_mock: bool = False
     solver_name: Optional[str] = None
     graph_number: Optional[int] = None
+    data_dir: Optional[str] = None
+
 
 class QuantumAnnealingAdjudicator(Adjudicator):
     """Adjudicator implementation using D-Wave quantum annealing."""
@@ -70,13 +74,23 @@ class QuantumAnnealingAdjudicator(Adjudicator):
             raise ValueError("shim_iterations must be positive")
         if self.params.alpha_phi <= 0 or self.params.alpha_phi > 1:
             raise ValueError("alpha_phi must be in (0, 1]")
-        
-        # Get graph-specific data if graph number provided
-        if self.params.graph_number is not None:
-            self.automorphisms = get_automorphisms(self.params.graph_number)
-            self.embeddings = get_embeddings(
-                self.params.graph_number,
-                self.params.solver_name
+
+        # load directory for automorphisms & embeddings
+        if 'data_dir' in kwargs:
+            if not isinstance(kwargs['data_dir'], str):
+                raise ValueError("data_dir must be a string")
+            if not os.path.isdir(kwargs['data_dir']):
+                raise ValueError(f"Directory not found: {kwargs['data_dir']}")
+            self.params.data_dir = kwargs['data_dir']
+
+        self._parameters = {'data_dir': self.params.data_dir}
+
+        # we need these so always compute / load in
+        self.automorphisms = get_automorphisms(self.params.graph_number, self.params.data_dir)
+        self.embeddings = get_embeddings(
+            self.params.graph_number,
+            self.params.solver_name,
+            self.params.data_dir
             )
             
         # Initialize sampler
@@ -234,8 +248,8 @@ class QuantumAnnealingAdjudicator(Adjudicator):
                 total_samples[:, vertex] = random_samples[:, i]
         
         # Calculate correlation matrix
-        sample_count = (self.params.num_reads * num_embeddings *
-                       self.params.num_chip_runs)
+        sample_count = (self.params.num_reads * num_embeddings * self.params.num_chip_runs)
+
         correlation_matrix = (
             np.einsum('si,sj->ij', total_samples, total_samples) / sample_count -
             np.eye(num_vertices)
