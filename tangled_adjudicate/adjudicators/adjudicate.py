@@ -23,9 +23,10 @@ class old_Adjudicator(object):
     def __init__(self, params):
         self.params = params
         self.results_dict = None
+        self.data_dir = os.path.join(os.getcwd(), '..', 'data')
         if self.params.USE_QC:   # if using QC, get embeddings and automorphisms
-            self.automorphisms = get_automorphisms(self.params.GRAPH_NUMBER)
-            self.embeddings = get_embeddings(self.params.GRAPH_NUMBER, self.params.QC_SOLVER_TO_USE)
+            self.automorphisms = get_automorphisms(self.params.GRAPH_NUMBER, self.data_dir)
+            self.embeddings = get_embeddings(self.params.GRAPH_NUMBER, self.params.QC_SOLVER_TO_USE, self.data_dir)
 
     def compute_winner_score_and_influence_from_correlation_matrix(self, game_state, correlation_matrix):
         # correlation_matrix is assumed to be symmetric matrix with zeros on diagonal (so that self-correlation of
@@ -134,10 +135,10 @@ class old_Adjudicator(object):
 
     def quantum_annealing(self, game_state):
 
-        number_of_embeddings = len(self.embeddings)                 # e.g. P=343
-        number_of_problem_variables = game_state['num_nodes']       # e.g. 3
+        num_vertices = game_state['num_nodes']       # e.g. 3
+        num_embeddings = len(self.embeddings)                 # e.g. P=343
+        total_samples = np.zeros((1, num_vertices))        # 0th layer to get vstack going, remove at the end
 
-        samples = np.zeros((1, number_of_problem_variables))        # 0th layer to get vstack going, remove at the end
         shim_stats = None
         all_samples = None
         indices_of_flips = None
@@ -180,14 +181,14 @@ class old_Adjudicator(object):
         # this finds any isolated vertices that may be in the graph -- we will replace the samples returned for these
         # at the end with true 50/50 statistics, so we don't have to worry about them
 
-        isolated_vertices = find_isolated_vertices(number_of_problem_variables, base_jay)
+        isolated_vertices = find_isolated_vertices(num_vertices, base_jay)
 
         # We now enter a loop where each pass through the loop programs the chip to specific values of h and J but
         # now for the entire chip. We do this by first selecting one automorphism and embedding it in multiple
         # parallel ways across the entire chip, and then optionally applying a gauge transform across all the qubits
         # used. This latter process chooses different random gauges for each of the embedded instances.
 
-        for chip_run_idx in range(self.params.NUMBER_OF_CHIP_RUNS):
+        for _ in range(self.params.NUMBER_OF_CHIP_RUNS):
 
             # *******************************************************************
             # Step 1: Randomly select an automorphism and embed it multiple times
@@ -198,9 +199,9 @@ class old_Adjudicator(object):
 
             permuted_embedding = []
 
-            for each_embedding in self.embeddings[:number_of_embeddings]:    # each_embedding is like [1093, 1098, 136]; 343 of these for three-vertex graph
+            for each_embedding in self.embeddings[:num_embeddings]:    # each_embedding is like [1093, 1098, 136]; 343 of these for three-vertex graph
                 this_embedding = []
-                for each_vertex in range(number_of_problem_variables):    # each_vertex ranges from 0 to 2
+                for each_vertex in range(num_vertices):    # each_vertex ranges from 0 to 2
                     this_embedding.append(each_embedding[inverted_automorphism_to_use[each_vertex]])
                 permuted_embedding.append(this_embedding)
 
@@ -209,9 +210,9 @@ class old_Adjudicator(object):
 
             embedding_to_use = {}
 
-            for embedding_idx in range(number_of_embeddings):
-                for each_vertex in range(number_of_problem_variables):  # up to 0..1037
-                    embedding_to_use[number_of_problem_variables * embedding_idx + each_vertex] = \
+            for embedding_idx in range(num_embeddings):
+                for each_vertex in range(num_vertices):  # up to 0..1037
+                    embedding_to_use[num_vertices * embedding_idx + each_vertex] = \
                         [permuted_embedding[embedding_idx][each_vertex]]
 
             # *****************************************************************************************************
@@ -226,17 +227,17 @@ class old_Adjudicator(object):
             full_h = {}
             full_j = {}
 
-            for embedding_idx in range(number_of_embeddings):
-                for each_vertex in range(number_of_problem_variables):
-                    full_h[number_of_problem_variables * embedding_idx + each_vertex] = 0
+            for embedding_idx in range(num_embeddings):
+                for each_vertex in range(num_vertices):
+                    full_h[num_vertices * embedding_idx + each_vertex] = 0
 
             for k, v in base_jay.items():
                 edge_under_automorph = (min(automorphism_to_use[k[0]], automorphism_to_use[k[1]]),
                                         max(automorphism_to_use[k[0]], automorphism_to_use[k[1]]))
                 full_j[edge_under_automorph] = v
-                for j in range(1, number_of_embeddings):
-                    full_j[(edge_under_automorph[0] + number_of_problem_variables * j,
-                            edge_under_automorph[1] + number_of_problem_variables * j)] = v
+                for j in range(1, num_embeddings):
+                    full_j[(edge_under_automorph[0] + num_vertices * j,
+                            edge_under_automorph[1] + num_vertices * j)] = v
 
             # **************************************************************************
             # Step 3: Choose random gauge, modify h, J parameters for full chip using it
@@ -311,11 +312,11 @@ class old_Adjudicator(object):
             # ***********************************
 
             # this should make a big fat stack of the results in BLUE variable ordering
-            all_samples_processed_blue = all_samples[:, range(number_of_problem_variables)]
-            for k in range(1, number_of_embeddings):
+            all_samples_processed_blue = all_samples[:, range(num_vertices)]
+            for k in range(1, num_embeddings):
                 all_samples_processed_blue = np.vstack((all_samples_processed_blue,
-                                                        all_samples[:, range(number_of_problem_variables * k,
-                                                                             number_of_problem_variables * (k + 1))]))
+                                                        all_samples[:, range(num_vertices * k,
+                                                                             num_vertices * (k + 1))]))
 
             # **********************************************************************
             # Step 9: Reorder columns to make them BLACK order instead of BLUE order
@@ -327,23 +328,23 @@ class old_Adjudicator(object):
             # Step 10: Add new samples to the stack, all in BLACK order
             # *********************************************************
 
-            samples = np.vstack((samples, all_samples_processed_black))
+            total_samples = np.vstack((total_samples, all_samples_processed_black))
 
         # ***************************************************************
         # Step 11: Post process samples stack to extract return variables
         # ***************************************************************
 
-        samples = np.delete(samples, (0), axis=0)  # delete first row of zeros
+        total_samples = np.delete(total_samples, (0), axis=0)  # delete first row of zeros
 
         # replace columns where there are disconnected variables with truly random samples
         for idx in isolated_vertices:
-            samples[:, idx] = np.random.choice([1, -1], size=samples.shape[0])
+            total_samples[:, idx] = np.random.choice([1, -1], size=total_samples.shape[0])
 
-        sample_count = self.params.NUM_READS_QC * number_of_embeddings * self.params.NUMBER_OF_CHIP_RUNS
+        sample_count = self.params.NUM_READS_QC * num_embeddings * self.params.NUMBER_OF_CHIP_RUNS
 
         # this is a full matrix with zeros on the diagonal that uses all the samples
         correlation_matrix = \
-            (np.einsum('si,sj->ij', samples, samples) / sample_count -
+            (np.einsum('si,sj->ij', total_samples, total_samples) / sample_count -
                 np.eye(int(game_state['num_nodes'])))
 
         winner, score_difference, influence_vector = (
