@@ -24,7 +24,7 @@ def main():
     # respectively, that are of the sort that are closest to the draw line at score = +- 1/2
 
     # solver_list = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing', 'lookup_table']
-    solver_list = ['simulated_annealing', 'schrodinger_equation', 'lookup_table']
+    solver_list = ['quantum_annealing']
 
     precision_digits = 4    # just to clean up print output
     np.set_printoptions(suppress=True)   # remove scientific notation
