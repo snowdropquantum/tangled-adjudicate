@@ -20,7 +20,7 @@ class QAParameters:
     use_shim: bool = False
     shim_iterations: int = 1
     alpha_phi: float = 0.1
-    use_mock: bool = False
+    use_mock: bool = True
     solver_name: Optional[str] = None
     graph_number: Optional[int] = None
     data_dir: Optional[str] = None
@@ -35,7 +35,8 @@ class QuantumAnnealingAdjudicator(Adjudicator):
         self.params = QAParameters()
         self.embeddings: List[List[int]] = []
         self.automorphisms: List[Dict[int, int]] = []
-        self.sampler: Optional[FixedEmbeddingComposite] = None
+        self.shim_stats: Dict[str] = {}
+        # self.sampler: Optional[FixedEmbeddingComposite] = None
         
     def setup(self, **kwargs) -> None:
         """Configure quantum annealing parameters and initialize D-Wave connection.
@@ -83,23 +84,16 @@ class QuantumAnnealingAdjudicator(Adjudicator):
                 raise ValueError(f"Directory not found: {kwargs['data_dir']}")
             self.params.data_dir = kwargs['data_dir']
 
-        self._parameters = {'data_dir': self.params.data_dir}
+        # self._parameters = {'data_dir': self.params.data_dir}
 
         # we need these so always compute / load in
         self.automorphisms = get_automorphisms(self.params.graph_number, self.params.data_dir)
-        self.embeddings = get_embeddings(
-            self.params.graph_number,
-            self.params.solver_name,
-            self.params.data_dir
-            )
+        self.embeddings = get_embeddings(self.params.graph_number, self.params.solver_name, self.params.data_dir)
             
         # Initialize sampler
         try:
             if self.params.use_mock:
-                base_sampler = MockDWaveSampler(
-                    topology_type='zephyr',
-                    topology_shape=[6, 4]
-                )
+                base_sampler = MockDWaveSampler(topology_type='zephyr', topology_shape=[6, 4])
             else:
                 base_sampler = DWaveSampler(solver=self.params.solver_name)
                 
@@ -108,7 +102,13 @@ class QuantumAnnealingAdjudicator(Adjudicator):
             
         except Exception as e:
             raise RuntimeError(f"Failed to initialize D-Wave sampler: {str(e)}")
-            
+
+        # initialize shim_stats if required
+        if self.params.use_shim:
+            self.shim_stats = {'qubit_magnetizations': [],
+                               'average_absolute_value_of_magnetization': [],
+                               'all_flux_bias_offsets': []}
+
         # Store parameters
         self._parameters = self.params.__dict__
         
@@ -177,7 +177,13 @@ class QuantumAnnealingAdjudicator(Adjudicator):
         num_vertices = game_state['num_nodes']
         num_embeddings = len(self.embeddings)
         total_samples = np.zeros((1, num_vertices))  # Initial array for stacking
-        
+
+        all_samples = None
+        indices_of_flips = None
+
+        if self.params.use_mock and self.params.use_shim:
+            print('D-Wave mock sampler is not set up to use the shimming process, turn shim off if using mock!')
+
         # Process each chip run
         for _ in range(self.params.num_chip_runs):
             # Select random automorphism
@@ -185,36 +191,41 @@ class QuantumAnnealingAdjudicator(Adjudicator):
             embedding_map = self._process_embedding(game_state, automorphism)
             
             # Create sampler with fixed embedding
-            sampler = FixedEmbeddingComposite(
-                self._base_sampler,
-                embedding=embedding_map
-            )
+            sampler = FixedEmbeddingComposite(self._base_sampler, embedding=embedding_map)
             
             # Get Ising model
             ising_model = self._game_state_to_ising(game_state)
             
             # Set up sampling parameters
-            sample_kwargs = {
+            sampler_kwargs = {
                 'num_reads': self.params.num_reads,
                 'answer_mode': 'raw'
             }
             
             if not self.params.use_mock:
-                sample_kwargs.update({
+                sampler_kwargs.update({
+                    'fast_anneal': True,
                     'annealing_time': self.params.anneal_time / 1000,
                     'auto_scale': False
                 })
-            
+
+            if self.params.use_shim:
+                sampler_kwargs.update({'readout_thermalization': 100.,
+                                       'auto_scale': False,
+                                       'flux_drift_compensation': True,
+                                       'flux_biases': [0] * base_sampler.properties['num_qubits']})
+
             # Perform sampling
             response = sampler.sample_ising(
                 ising_model['h'],
                 ising_model['j'],
-                **sample_kwargs
+                **sampler_kwargs
             )
             
             # Process samples
             samples = np.array(response.record.sample)
-            
+
+            # todo this is in the wrong order
             # Apply gauge transform if enabled
             if self.params.use_gauge_transform:
                 flip_indices = np.random.choice(
