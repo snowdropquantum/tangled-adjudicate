@@ -32,6 +32,10 @@ class Adjudicator(ABC):
     def __init__(self) -> None:
         """Initialize base adjudicator."""
         self._parameters: Dict[str, Any] = {}
+        self.j_map = {0: 0.0,       # edge (i, j) uncolored , J_ij=0
+                      1: 0.0,       # edge (i, j) colored gray, J_ij=0
+                      2: -1.0,      # edge (i, j) colored green, FM coupling, J_ij=-1.0
+                      3: 1.0}       # edge (i, j) colored purple, AFM coupling, J_ij=+1.0
     
     @abstractmethod
     def setup(self, **kwargs) -> None:
@@ -77,10 +81,10 @@ class Adjudicator(ABC):
         j = {}
         
         for edge in game_state['edges']:
-            v1, v2, weight = edge
+            v1, v2, edge_label = edge
             if v1 > v2:
                 v1, v2 = v2, v1
-            j[(v1, v2)] = float(weight)
+            j[(v1, v2)] = float(self.j_map[edge_label])
             
         return IsingModel(h=h, j=j)
 
