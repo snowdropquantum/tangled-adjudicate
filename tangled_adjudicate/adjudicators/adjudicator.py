@@ -3,6 +3,7 @@ from typing import Any, TypedDict, List, Tuple, Optional, Dict, Union, Set
 import numpy as np
 import numpy.typing as npt
 
+
 class GameState(TypedDict):
     num_nodes: int
     edges: List[Tuple[int, int, int]]  # (node1, node2, weight)
@@ -13,6 +14,7 @@ class GameState(TypedDict):
     player1_node: Optional[int]
     player2_node: Optional[int]
 
+
 class AdjudicationResult(TypedDict):
     game_state: GameState
     adjudicator: str
@@ -22,9 +24,11 @@ class AdjudicationResult(TypedDict):
     correlation_matrix: Optional[npt.NDArray[np.float64]]
     parameters: Dict[str, Union[str, int, float, bool]]
 
+
 class IsingModel(TypedDict):
     h: Dict[int, float]  # Local fields
     j: Dict[Tuple[int, int], float]  # Coupling strengths
+
 
 class Adjudicator(ABC):
     """Base interface for game state adjudication implementations."""
