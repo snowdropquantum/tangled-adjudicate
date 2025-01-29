@@ -150,7 +150,7 @@ def raster_embedding_search(hardware_graph, subgraph, raster_breadth=2, delete_u
     return embmat
 
 
-def get_embeddings(source_graph_number, qc_solver_to_use):
+def get_embeddings(source_graph_number, qc_solver_to_use, data_dir):
     # generates multiple parallel embeddings into hardware for your graph
     # the smaller the graph, the longer this takes -- e.g. source_graph_number == 1 takes about 4 minutes
     #
@@ -166,9 +166,7 @@ def get_embeddings(source_graph_number, qc_solver_to_use):
     file_name = ('embeddings_graph_number_' + str(source_graph_number) + '_raster_breadth_' + str(raster_breadth) +
                  '_gridsize_' + str(grid_size) + '_qc_' + qc_solver_to_use + '.pkl')
 
-    data_dir = os.path.join(os.getcwd(), '..', 'data')      # checks to see if /data exists; if not, creates it
-
-    if not os.path.isdir(data_dir):
+    if not os.path.isdir(data_dir):   # checks to see if /data exists; if not, creates it
         os.mkdir(data_dir)
 
     file_path = os.path.join(data_dir, file_name)
