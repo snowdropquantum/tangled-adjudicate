@@ -194,8 +194,8 @@ class old_Adjudicator(object):
             # Step 1: Randomly select an automorphism and embed it multiple times
             # *******************************************************************
 
-            automorphism_to_use = random.choice(self.automorphisms)  # eg {0:0, 1:2, 2:1}
-            inverted_automorphism_to_use = {v: k for k, v in automorphism_to_use.items()}   # swaps key <-> values
+            automorphism = random.choice(self.automorphisms)  # eg {0:0, 1:2, 2:1}
+            inverted_automorphism_to_use = {v: k for k, v in automorphism.items()}   # swaps key <-> values
 
             permuted_embedding = []
 
@@ -208,11 +208,11 @@ class old_Adjudicator(object):
             # given that permuted_embedding looks like [[1229, 1235, 563], [872, 242, 866], ...]
             # this next part converts into the format {0: [1229], 1: [1235], 2: [563], 3: [872], 4: [242], 5: [866]}
 
-            embedding_to_use = {}
+            embedding_map = {}
 
             for embedding_idx in range(num_embeddings):
                 for each_vertex in range(num_vertices):  # up to 0..1037
-                    embedding_to_use[num_vertices * embedding_idx + each_vertex] = \
+                    embedding_map[num_vertices * embedding_idx + each_vertex] = \
                         [permuted_embedding[embedding_idx][each_vertex]]
 
             # *****************************************************************************************************
@@ -232,8 +232,8 @@ class old_Adjudicator(object):
                     full_h[num_vertices * embedding_idx + each_vertex] = 0
 
             for k, v in base_jay.items():
-                edge_under_automorph = (min(automorphism_to_use[k[0]], automorphism_to_use[k[1]]),
-                                        max(automorphism_to_use[k[0]], automorphism_to_use[k[1]]))
+                edge_under_automorph = (min(automorphism[k[0]], automorphism[k[1]]),
+                                        max(automorphism[k[0]], automorphism[k[1]]))
                 full_j[edge_under_automorph] = v
                 for j in range(1, num_embeddings):
                     full_j[(edge_under_automorph[0] + num_vertices * j,
@@ -260,7 +260,7 @@ class old_Adjudicator(object):
             sampler_kwargs.update({'h': full_h,
                                    'J': full_j})
 
-            sampler = FixedEmbeddingComposite(base_sampler, embedding=embedding_to_use)   # applies the embedding
+            sampler = FixedEmbeddingComposite(base_sampler, embedding=embedding_map)   # applies the embedding
 
             # *************************************************************************
             # Step 5: Optionally start shimming process in the BLUE with RED STAR basis
@@ -286,7 +286,7 @@ class old_Adjudicator(object):
                     shim_stats['average_absolute_value_of_magnetization'].append(np.sum([abs(k) for k in magnetization])/len(magnetization))
 
                     qubit_magnetization = [0] * base_sampler.properties['num_qubits']
-                    for k, v in embedding_to_use.items():
+                    for k, v in embedding_map.items():
                         qubit_magnetization[v[0]] = magnetization[k]        # check
 
                     shim_stats['qubit_magnetizations'].append(qubit_magnetization)
@@ -322,7 +322,7 @@ class old_Adjudicator(object):
             # Step 9: Reorder columns to make them BLACK order instead of BLUE order
             # **********************************************************************
 
-            all_samples_processed_black = all_samples_processed_blue[:, [automorphism_to_use[i] for i in range(all_samples_processed_blue.shape[1])]]
+            all_samples_processed_black = all_samples_processed_blue[:, [automorphism[i] for i in range(all_samples_processed_blue.shape[1])]]
 
             # *********************************************************
             # Step 10: Add new samples to the stack, all in BLACK order
