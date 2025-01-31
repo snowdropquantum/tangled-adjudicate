@@ -10,6 +10,7 @@ from ..utils.utilities import (
 )
 from .adjudicator import Adjudicator, GameState, AdjudicationResult
 
+
 class LookupTableAdjudicator(Adjudicator):
     """Adjudicator implementation using pre-computed lookup tables."""
     
@@ -88,8 +89,7 @@ class LookupTableAdjudicator(Adjudicator):
         self._validate_game_state(game_state)
         
         # Load lookup table if needed
-        if (self.results_dict is None or
-            len(next(iter(self.results_dict.keys()))) != game_state['num_nodes']):
+        if (self.results_dict is None or len(next(iter(self.results_dict.keys()))) != game_state['num_nodes']):
             self._load_lookup_table(game_state['num_nodes'])
             
         if not self.results_dict:
