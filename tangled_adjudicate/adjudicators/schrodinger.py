@@ -4,6 +4,7 @@ from ..schrodinger.schrodinger_functions import evolve_schrodinger
 
 from .adjudicator import Adjudicator, GameState, AdjudicationResult
 
+
 class SchrodingerEquationAdjudicator(Adjudicator):
     """Adjudicator implementation using Schrödinger equation evolution."""
     
