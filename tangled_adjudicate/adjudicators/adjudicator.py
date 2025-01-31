@@ -6,7 +6,7 @@ import numpy.typing as npt
 
 class GameState(TypedDict):
     num_nodes: int
-    edges: List[Tuple[int, int, int]]  # (node1, node2, weight)
+    edges: List[Tuple[int, int, int]]  # (node1, node2, edge_label=0,1,2,3)
     player1_id: str
     player2_id: str
     turn_count: int
@@ -68,8 +68,7 @@ class Adjudicator(ABC):
         for edge in game_state['edges']:
             if len(edge) != 3:
                 raise ValueError(f"Invalid edge format: {edge}")
-            if not (0 <= edge[0] < game_state['num_nodes'] and 
-                   0 <= edge[1] < game_state['num_nodes']):
+            if not (0 <= edge[0] < game_state['num_nodes'] and 0 <= edge[1] < game_state['num_nodes']):
                 raise ValueError(f"Edge vertices out of range: {edge}")
 
     def _game_state_to_ising(self, game_state: GameState) -> IsingModel:
