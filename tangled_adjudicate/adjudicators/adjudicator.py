@@ -113,7 +113,7 @@ class Adjudicator(ABC):
         self,
         game_state: GameState,
         correlation_matrix: npt.NDArray[np.float64],
-        epsilon: float = 1e-6
+        epsilon: float = 0.5
     ) -> Tuple[Optional[str], Optional[float], npt.NDArray[np.float64]]:
         """Compute winner, score and influence from correlation matrix."""
         if not isinstance(correlation_matrix, np.ndarray):
@@ -130,8 +130,7 @@ class Adjudicator(ABC):
         if game_state['player1_node'] is None or game_state['player2_node'] is None:
             return None, None, influence_vector
             
-        score = (influence_vector[game_state['player1_node']] - 
-                influence_vector[game_state['player2_node']])
+        score = influence_vector[game_state['player1_node']] - influence_vector[game_state['player2_node']]
         
         if score > epsilon:
             winner = 'red'
