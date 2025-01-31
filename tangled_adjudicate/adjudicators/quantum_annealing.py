@@ -16,12 +16,12 @@ class QAParameters:
     num_reads: int = 1000
     anneal_time: float = 5.0  # ns
     num_chip_runs: int = 1
-    use_gauge_transform: bool = True
+    use_gauge_transform: bool = False
     use_shim: bool = False
     shim_iterations: int = 1
     alpha_phi: float = 0.1
     use_mock: bool = True
-    solver_name: Optional[str] = None
+    solver_name: str = 'Advantage2_prototype2.6'
     graph_number: Optional[int] = None
     data_dir: Optional[str] = None
 
@@ -36,8 +36,7 @@ class QuantumAnnealingAdjudicator(Adjudicator):
         self.embeddings: List[List[int]] = []
         self.automorphisms: List[Dict[int, int]] = []
         self.shim_stats: Dict[str] = {}
-        # self.sampler: Optional[FixedEmbeddingComposite] = None
-        
+
     def setup(self, **kwargs) -> None:
         """Configure quantum annealing parameters and initialize D-Wave connection.
         
@@ -84,8 +83,6 @@ class QuantumAnnealingAdjudicator(Adjudicator):
                 raise ValueError(f"Directory not found: {kwargs['data_dir']}")
             self.params.data_dir = kwargs['data_dir']
 
-        # self._parameters = {'data_dir': self.params.data_dir}
-
         # we need these so always compute / load in
         self.automorphisms = get_automorphisms(self.params.graph_number, self.params.data_dir)
         self.embeddings = get_embeddings(self.params.graph_number, self.params.solver_name, self.params.data_dir)
@@ -111,25 +108,7 @@ class QuantumAnnealingAdjudicator(Adjudicator):
 
         # Store parameters
         self._parameters = self.params.__dict__
-        
-    def _apply_gauge_transform(
-        self,
-        samples: np.ndarray,
-        flip_indices: List[int]
-    ) -> np.ndarray:
-        """Apply gauge transformation to samples.
-        
-        Args:
-            samples: Sample array to transform
-            flip_indices: Indices where spins should be flipped
-            
-        Returns:
-            Transformed sample array
-        """
-        samples = samples.copy()
-        samples[:, flip_indices] = -samples[:, flip_indices]
-        return samples
-        
+
     def _process_embedding(
         self,
         game_state: GameState,
@@ -184,6 +163,7 @@ class QuantumAnnealingAdjudicator(Adjudicator):
             ValueError: If the game state is invalid
             RuntimeError: If quantum annealing fails
         """
+
         if not self._base_sampler:
             raise RuntimeError("Sampler not initialized. Call setup() first.")
             
@@ -200,15 +180,12 @@ class QuantumAnnealingAdjudicator(Adjudicator):
         if self.params.use_mock and self.params.use_shim:
             print('D-Wave mock sampler is not set up to use the shimming process, turn shim off if using mock!')
 
-        sampler_kwargs =  {
+        sampler_kwargs = {
                 'num_reads': self.params.num_reads,
                 'answer_mode': 'raw'
             }
 
-        if self.params.use_mock:
-            base_sampler = MockDWaveSampler(topology_type='zephyr', topology_shape=[6, 4])
-        else:
-            base_sampler = DWaveSampler(solver=self.params.QC_SOLVER_TO_USE)
+        if not self.params.use_mock:
             sampler_kwargs.update({
                 'fast_anneal': True,
                 'annealing_time': self.params.anneal_time / 1000,
@@ -216,9 +193,6 @@ class QuantumAnnealingAdjudicator(Adjudicator):
             })
 
         if self.params.use_shim:
-            shim_stats = {'qubit_magnetizations': [],
-                          'average_absolute_value_of_magnetization': [],
-                          'all_flux_bias_offsets': []}
             sampler_kwargs.update({'readout_thermalization': 100.,
                                    'auto_scale': False,
                                    'flux_drift_compensation': True,
@@ -272,7 +246,7 @@ class QuantumAnnealingAdjudicator(Adjudicator):
                 for each_vertex in range(num_vertices):
                     full_h[num_vertices * embedding_idx + each_vertex] = 0
 
-            for k, v in base_ising_model['j'].items():   # is this correct?
+            for k, v in base_ising_model['j'].items():
                 edge_under_automorph = (min(automorphism[k[0]], automorphism[k[1]]),
                                         max(automorphism[k[0]], automorphism[k[1]]))
                 full_j[edge_under_automorph] = v
@@ -288,7 +262,7 @@ class QuantumAnnealingAdjudicator(Adjudicator):
             # transformation has been applied the BLUE with RED STAR situation.
 
             if self.params.use_gauge_transform:
-                flip_map = [random.choice([-1, 1]) for _ in full_h]   # random list of +1, -1 values of len # qubits
+                flip_map = [np.random.choice([-1, 1]) for _ in full_h]   # random list of +1, -1 values of len # qubits
                 indices_of_flips = [i for i, x in enumerate(flip_map) if x == -1]       # the indices of the -1 values
 
                 for edge_key, j_val in full_j.items():              # for each edge and associated J value
@@ -301,7 +275,7 @@ class QuantumAnnealingAdjudicator(Adjudicator):
             sampler_kwargs.update({'h': full_h,
                                    'J': full_j})
 
-            sampler = FixedEmbeddingComposite(base_sampler, embedding=embedding_map)   # applies the embedding
+            sampler = FixedEmbeddingComposite(self._base_sampler, embedding=embedding_map)   # applies the embedding
 
             # *************************************************************************
             # Step 5: Optionally start shimming process in the BLUE with RED STAR basis
@@ -323,23 +297,23 @@ class QuantumAnnealingAdjudicator(Adjudicator):
                     # Step 6a: Compute average values of each qubit == magnetization
                     # *************************************************************
 
-                    magnetization = np.sum(all_samples, axis=0)/self.params.NUM_READS_QC   # BLUE with RED STAR label ordering
-                    shim_stats['average_absolute_value_of_magnetization'].append(np.sum([abs(k) for k in magnetization])/len(magnetization))
+                    magnetization = np.sum(all_samples, axis=0)/self.params.num_reads   # BLUE with RED STAR label ordering
+                    self.shim_stats['average_absolute_value_of_magnetization'].append(np.sum([abs(k) for k in magnetization])/len(magnetization))
 
-                    qubit_magnetization = [0] * base_sampler.properties['num_qubits']
+                    qubit_magnetization = [0] * self._base_sampler.properties['num_qubits']
                     for k, v in embedding_map.items():
                         qubit_magnetization[v[0]] = magnetization[k]        # check
 
-                    shim_stats['qubit_magnetizations'].append(qubit_magnetization)
+                    self.shim_stats['qubit_magnetizations'].append(qubit_magnetization)
 
                     # **************************************
                     # Step 6b: Adjust flux bias offset terms
                     # **************************************
 
-                    for k in range(base_sampler.properties['num_qubits']):
-                        sampler_kwargs['flux_biases'][k] -= self.params.ALPHA_PHI * qubit_magnetization[k]
+                    for k in range(self._base_sampler.properties['num_qubits']):
+                        sampler_kwargs['flux_biases'][k] -= self.params.alpha_phi * qubit_magnetization[k]
 
-                    shim_stats['all_flux_bias_offsets'].append(sampler_kwargs['flux_biases'])
+                    self.shim_stats['all_flux_bias_offsets'].append(sampler_kwargs['flux_biases'])
 
             # *****************************************************************************************************
             # Step 7: Reverse gauge transform, from BLUE with RED STAR to just BLUE, after shimming process is done
@@ -381,106 +355,16 @@ class QuantumAnnealingAdjudicator(Adjudicator):
         for idx in isolated_vertices:
             total_samples[:, idx] = np.random.choice([1, -1], size=total_samples.shape[0])
 
-        sample_count = self.params.NUM_READS_QC * num_embeddings * self.params.NUMBER_OF_CHIP_RUNS
+        sample_count = self.params.num_reads * num_embeddings * self.params.num_chip_runs
 
         # this is a full matrix with zeros on the diagonal that uses all the samples
         correlation_matrix = \
             (np.einsum('si,sj->ij', total_samples, total_samples) / sample_count -
-             np.eye(int(game_state['num_nodes'])))
+             np.eye(num_vertices))
 
-        winner, score_difference, influence_vector = (
-            self.compute_winner_score_and_influence_from_correlation_matrix(game_state, correlation_matrix))
-
-        # todo make this compatible with output of erik's version
-        return_dictionary = {'game_state': game_state, 'adjudicator': 'quantum_annealing',
-                             'winner': winner, 'score': score_difference, 'influence_vector': influence_vector,
-                             'correlation_matrix': correlation_matrix, 'parameters': self.params}
-
-        return return_dictionary
-
-
-
-            # Create sampler with fixed embedding
-            sampler = FixedEmbeddingComposite(self._base_sampler, embedding=embedding_map)
-            
-            # Get Ising model
-            ising_model = self._game_state_to_ising(game_state)
-            
-            # Set up sampling parameters
-            sampler_kwargs = {
-                'num_reads': self.params.num_reads,
-                'answer_mode': 'raw'
-            }
-            
-            if not self.params.use_mock:
-                sampler_kwargs.update({
-                    'fast_anneal': True,
-                    'annealing_time': self.params.anneal_time / 1000,
-                    'auto_scale': False
-                })
-
-            if self.params.use_shim:
-                sampler_kwargs.update({'readout_thermalization': 100.,
-                                       'auto_scale': False,
-                                       'flux_drift_compensation': True,
-                                       'flux_biases': [0] * base_sampler.properties['num_qubits']})
-
-            # Perform sampling
-            response = sampler.sample_ising(
-                ising_model['h'],
-                ising_model['j'],
-                **sampler_kwargs
-            )
-            
-            # Process samples
-            samples = np.array(response.record.sample)
-
-            # todo this is in the wrong order
-            # Apply gauge transform if enabled
-            if self.params.use_gauge_transform:
-                flip_indices = np.random.choice(
-                    [0, 1],
-                    size=samples.shape[1],
-                    p=[0.5, 0.5]
-                ).nonzero()[0]
-                samples = self._apply_gauge_transform(samples, flip_indices)
-            
-            # Stack samples for all embeddings
-            processed_samples = samples[:, :num_vertices]
-            for k in range(1, num_embeddings):
-                processed_samples = np.vstack((
-                    processed_samples,
-                    samples[:, k*num_vertices:(k+1)*num_vertices]
-                ))
-            
-            total_samples = np.vstack((total_samples, processed_samples))
-            
-        # Remove initial zero row
-        total_samples = np.delete(total_samples, 0, axis=0)
-        
-        # Handle isolated vertices
-        isolated_vertices = self._find_isolated_vertices(game_state)
-        if isolated_vertices:
-            random_samples = np.random.choice(
-                [1, -1],
-                size=(total_samples.shape[0], len(isolated_vertices))
-            )
-            for i, vertex in enumerate(isolated_vertices):
-                total_samples[:, vertex] = random_samples[:, i]
-        
-        # Calculate correlation matrix
-        sample_count = (self.params.num_reads * num_embeddings * self.params.num_chip_runs)
-
-        correlation_matrix = (
-            np.einsum('si,sj->ij', total_samples, total_samples) / sample_count -
-            np.eye(num_vertices)
-        )
-        
         # Compute results
-        winner, score, influence_vector = self._compute_winner_score_and_influence(
-            game_state, correlation_matrix
-        )
-        
+        winner, score, influence_vector = self._compute_winner_score_and_influence(game_state, correlation_matrix)
+
         return AdjudicationResult(
             game_state=game_state,
             adjudicator='quantum_annealing',
