@@ -4,6 +4,7 @@ import numpy as np
 
 from .adjudicator import Adjudicator, GameState, AdjudicationResult
 
+
 class SimulatedAnnealingAdjudicator(Adjudicator):
     """Adjudicator implementation using simulated annealing."""
     
@@ -82,24 +83,14 @@ class SimulatedAnnealingAdjudicator(Adjudicator):
         
         # Calculate correlation matrix
         samples = np.array(response.record.sample, dtype=float)
-        correlation_matrix = (
-            np.einsum('si,sj->ij', samples, samples) / self.num_reads -
-            np.eye(game_state['num_nodes'])
-        )
-        
-        # Handle isolated vertices
-        isolated_vertices = self._find_isolated_vertices(game_state)
-        if isolated_vertices:
-            samples = np.random.choice([1, -1], size=(self.num_reads, len(isolated_vertices)))
-            for i, vertex in enumerate(isolated_vertices):
-                correlation_matrix[:, vertex] = np.mean(samples[:, i])
-                correlation_matrix[vertex, :] = np.mean(samples[:, i])
-                correlation_matrix[vertex, vertex] = 0
-        
+
+        # creates symmetric matrix with zeros on diagonal (so that self-correlation of one is not counted) -- this is
+        # the standard for computing influence vector
+        correlation_matrix = (np.einsum('si,sj->ij', samples, samples) / self.num_reads -
+                              np.eye(game_state['num_nodes']))
+
         # Compute results
-        winner, score, influence_vector = self._compute_winner_score_and_influence(
-            game_state, correlation_matrix
-        )
+        winner, score, influence_vector = self._compute_winner_score_and_influence(game_state, correlation_matrix)
         
         return AdjudicationResult(
             game_state=game_state,
