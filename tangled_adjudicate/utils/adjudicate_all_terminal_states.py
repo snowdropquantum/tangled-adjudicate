@@ -81,6 +81,9 @@ def generate_adjudication_results_for_all_terminal_states(graph_number, solver_t
 
 def main():
 
+    # note: generating all schrodinger_equation adjudication results for graph 3 or bigger takes forever
+    # I spot checked new subclass version and all spot checks were good
+
     graph_number = 2
     solver_list = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing', 'lookup_table']
 
