@@ -1,6 +1,5 @@
 """ a place to put utility functions """
 import gdown
-import networkx as nx
 
 
 def get_tso(graph_number, file_path):
@@ -40,7 +39,7 @@ def convert_erik_game_state_to_my_game_state(game_state):
 
 
 def convert_my_game_state_to_erik_game_state(my_state, number_of_vertices, list_of_edge_tuples):
-
+    # extract erik state from geordie state
     my_vertices = my_state[:number_of_vertices]
     my_edges = my_state[number_of_vertices:]
 
@@ -66,10 +65,12 @@ def convert_my_game_state_to_erik_game_state(my_state, number_of_vertices, list_
     erik_edges = [(list_of_edge_tuples[k][0], list_of_edge_tuples[k][1], my_edges[k]) for k in range(len(my_edges))]
 
     game_state = {'num_nodes': number_of_vertices,
-                  # 'edges': [(0, 1, 3), (0, 2, 1), (0, 3, 3), (1, 2, 1), (1, 3, 3), (2, 3, 1)],
                   'edges': erik_edges,
-                  'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': turn_count,
-                  'current_player_index': current_player_idx, 'player1_node': player_1_vertex,
+                  'player1_id': 'player1',
+                  'player2_id': 'player2',
+                  'turn_count': turn_count,
+                  'current_player_index': current_player_idx,
+                  'player1_node': player_1_vertex,
                   'player2_node': player_2_vertex}
 
     return game_state
