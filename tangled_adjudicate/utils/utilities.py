@@ -85,9 +85,11 @@ def convert_erik_game_state_to_my_game_state(game_state):
     return my_state
 
 
-def convert_to_erik_game_state_for_adjudication(my_state, number_of_vertices, list_of_edge_tuples):
+def convert_my_game_state_to_erik_game_state(my_state, number_of_vertices, list_of_edge_tuples):
 
     my_vertices = my_state[:number_of_vertices]
+    my_edges = my_state[number_of_vertices:]
+
     turn_count = 0
 
     try:
@@ -102,16 +104,12 @@ def convert_to_erik_game_state_for_adjudication(my_state, number_of_vertices, li
     except ValueError:
         player_2_vertex = -1
 
-    my_edges = my_state[number_of_vertices:]
-
     turn_count += my_edges.count(1) + my_edges.count(2) + my_edges.count(3)
 
     # if turn_count is even, it's player 1 (red)'s turn
     current_player_idx = 1 if turn_count % 2 == 0 else 2
 
-    erik_edges = []
-    for k in range(len(list_of_edge_tuples)):
-        erik_edges.append((list_of_edge_tuples[k][0], list_of_edge_tuples[k][1], my_edges[k]))
+    erik_edges = [(list_of_edge_tuples[k][0], list_of_edge_tuples[k][1], my_edges[k]) for k in range(len(my_edges))]
 
     game_state = {'num_nodes': number_of_vertices,
                   # 'edges': [(0, 1, 3), (0, 2, 1), (0, 3, 3), (1, 2, 1), (1, 3, 3), (2, 3, 1)],
