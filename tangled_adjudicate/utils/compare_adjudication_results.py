@@ -7,10 +7,8 @@ from itertools import combinations
 
 
 def compare_adjudication_results(graph_number, solvers_to_use):
-    # solvers_to_use is a list of solvers of length either 2 or 3 comprising 2 or 3 of
-    # ['schrodinger_equation', 'simulated_annealing', 'quantum_annealing']
-    #
-    # indexing_solvers = {1: 'schrodinger_equation', 2: 'simulated_annealing', 3: 'quantum_annealing'}
+    # solvers_to_use is a list of solvers of length 2, 3, or 4 comprising 2, 3, or 4 of
+    # ['schrodinger_equation', 'simulated_annealing', 'quantum_annealing', 'lookup_table']
 
     # load adjudication results obtained from running /utils/adjudicate_all_terminal_states.py
     data_dir = os.path.join(os.getcwd(), '..', 'data')
@@ -42,7 +40,7 @@ def compare_adjudication_results(graph_number, solvers_to_use):
     for k0, value_dict in adjudication_results.items():  # k will be solver name string
         if k0 in solvers_to_use:   # if we want to add this, add it
             for k1, v in value_dict.items():
-                game_result[k1].append([k0, v['winner'], v['score']])
+                game_result[k1].append([k0, v['winner'], v['score']])   # score will be None for lookup_table
 
     comparisons = {}
     for k, v in game_result.items():    # k is game state string
@@ -60,7 +58,14 @@ def compare_adjudication_results(graph_number, solvers_to_use):
 
     to_plot = []
     for k, v in scores.items():
-        to_plot.append(v)
+        if v[0] is not None:
+            to_plot.append(v)
+
+    if 'lookup_table' in solvers_to_use:
+        solvers_to_use.remove('lookup_table')
+
+    if len(solvers_to_use) < 2:
+        print('need at least two of SA, QA, SE to generate score comparisons... lookup_table does not generate scores!')
 
     red_text = solvers_to_use[0] + ': red'
     blue_text = solvers_to_use[1] + ': blue'
@@ -93,7 +98,7 @@ def compare_adjudication_results(graph_number, solvers_to_use):
     if graph_number == 3:
 
         if len(to_plot) == 2:
-            plt.hist(to_plot, range=[-2, 2], bins=400, color=['red', 'blue'], stacked=True)
+            plt.hist(to_plot, range=[-4, 4], bins=800, color=['red', 'blue'], stacked=True)
         else:
             plt.hist(to_plot, range=[-4, 4], bins=800, color=['red', 'blue', 'cyan'], stacked=True)
 
@@ -115,10 +120,11 @@ def compare_adjudication_results(graph_number, solvers_to_use):
 
 def main():
 
-    solvers_to_use = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
+    solvers_to_use = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing', 'lookup_table']
+    compare_adjudication_results(graph_number=2, solvers_to_use=solvers_to_use)
 
-    for graph_number in range(2, 4):
-        compare_adjudication_results(graph_number=graph_number, solvers_to_use=solvers_to_use)
+    solvers_to_use = ['simulated_annealing', 'quantum_annealing', 'lookup_table']
+    compare_adjudication_results(graph_number=3, solvers_to_use=solvers_to_use)
 
 
 if __name__ == "__main__":
