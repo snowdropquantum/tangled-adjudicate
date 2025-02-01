@@ -33,9 +33,9 @@ The full D-Wave setup instructions are [here](https://docs.ocean.dwavesys.com/en
 
 ## Tangled Game Graph Specification
 
-A Tangled game graph is specified by a graph number, which label specific graphs included here. I've included ten graphs 
-numbered 1 through 10. Each graph requires specification of vertex count (how many vertices the graph has) and an 
-explicit edge list, which are included for these ten graphs. If you'd like to add a new graph, it's simple! Just add 
+A Tangled game graph is specified by a graph number, which label specific graphs included here. I've included eleven 
+graphs numbered 1 through 11. Each graph requires specification of vertex count (how many vertices the graph has) and 
+an explicit edge list, which are included for these 11 graphs. If you'd like to add a new graph, it's simple! Just add 
 it to the GraphProperties class, found in the /utils/game_graph_properties.py file.
 
 ## Tangled Game State Specification: Expected Input Format For Adjudicators
