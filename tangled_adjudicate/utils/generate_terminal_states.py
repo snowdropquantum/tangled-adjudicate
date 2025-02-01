@@ -9,29 +9,44 @@ import numpy as np
 
 from tangled_adjudicate.utils.game_graph_properties import GraphProperties
 from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
+from tangled_adjudicate.utils.utilities import convert_my_game_state_to_erik_game_state
 
 
-def convert_state_string_to_game_state(graph, terminal_state_string):
+# def convert_state_string_to_game_state(my_state, number_of_vertices, list_of_edge_tuples):
+#
+#     my_vertices = my_state[:number_of_vertices]
+#     my_edges = my_state[number_of_vertices:]
+#
+#     turn_count = 0
+#
+#     try:
+#         player_1_vertex = my_vertices.index(1)
+#         turn_count += 1
+#     except ValueError:
+#         player_1_vertex = -1
+#
+#     try:
+#         player_2_vertex = my_vertices.index(2)
+#         turn_count += 1
+#     except ValueError:
+#         player_2_vertex = -1
+#
+#     turn_count += my_edges.count(1) + my_edges.count(2) + my_edges.count(3)
+#
+#     # if turn_count is even, it's player 1 (red)'s turn
+#     current_player_idx = 1 if turn_count % 2 == 0 else 2
+#
+#     erik_edges = [(list_of_edge_tuples[k][0], list_of_edge_tuples[k][1], my_edges[k]) for k in range(len(my_edges))]
+#
+#     game_state = {'num_nodes': number_of_vertices, 'edges': erik_edges,
+#                   'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': turn_count,
+#                   'current_player_index': current_player_idx,
+#                   'player1_node': player_1_vertex, 'player2_node': player_2_vertex}
+#
+#     return game_state
 
-    vertex_list = terminal_state_string[:graph.vertex_count]
-    edge_list = terminal_state_string[graph.vertex_count:]
-    edges = [(graph.edge_list[k][0], graph.edge_list[k][1], edge_list[k]) for k in range(len(edge_list))]
 
-    turn_count = vertex_list.count(1) + vertex_list.count(2) + len(edge_list) - edge_list.count(0)
-
-    # if turn_count is even, it's red's turn
-    if not turn_count % 2:
-        current_player_index = 1
-    else:
-        current_player_index = 2
-
-    game_state = {'num_nodes': graph.vertex_count, 'edges': edges,
-                  'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': turn_count,
-                  'current_player_index': current_player_index,
-                  'player1_node': vertex_list.index(1), 'player2_node': vertex_list.index(2)}
-
-    return game_state
-
+# todo change this to the visualize_and_enumerate code
 
 def generate_all_tangled_terminal_states(graph_number):
     # this loads or generates all possible terminal game states for the graph indexed by graph_number and groups them
@@ -47,8 +62,7 @@ def generate_all_tangled_terminal_states(graph_number):
     graph = GraphProperties(graph_number)
     script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
     data_dir = os.path.join(script_dir, '..', 'data')
-    file_path = os.path.join(data_dir,
-                             "graph_" + str(graph_number) + "_unique_terminal_states.pkl")
+    file_path = os.path.join(data_dir, "graph_" + str(graph_number) + "_unique_terminal_states.pkl")
 
     if os.path.isfile(file_path):   # if the file already exists, just load it
         with open(file_path, "rb") as fp:
@@ -129,10 +143,10 @@ def generate_all_tangled_terminal_states(graph_number):
 
         game_states = {}
 
-        for each in terminal_states:
-            game_states[str(each)] = {}
-            game_states[str(each)]['game_state'] = convert_state_string_to_game_state(graph, each)
-            game_states[str(each)]['automorphisms'] = good_states[str(each)]
+        for my_game_state in terminal_states:
+            game_states[str(my_game_state)] = {}
+            game_states[str(my_game_state)]['game_state'] = convert_my_game_state_to_erik_game_state(my_game_state, graph.vertex_count, graph.edge_list)
+            game_states[str(my_game_state)]['automorphisms'] = good_states[str(my_game_state)]
 
         data_dir = os.path.join(os.getcwd(), '..', 'data')
 
@@ -145,9 +159,9 @@ def generate_all_tangled_terminal_states(graph_number):
 def main():
 
     # this generates all terminal states for graphs 2 and 3
-    for graph_number in range(2, 4):
-        gs = generate_all_tangled_terminal_states(graph_number)
-
+    gs2 = generate_all_tangled_terminal_states(graph_number=2)
+    gs3 = generate_all_tangled_terminal_states(graph_number=3)
+    print()
 
 if __name__ == "__main__":
     sys.exit(main())
