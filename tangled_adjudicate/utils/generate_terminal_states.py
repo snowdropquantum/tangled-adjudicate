@@ -12,56 +12,27 @@ from tangled_adjudicate.utils.find_graph_automorphisms import get_automorphisms
 from tangled_adjudicate.utils.utilities import convert_my_game_state_to_erik_game_state
 
 
-# def convert_state_string_to_game_state(my_state, number_of_vertices, list_of_edge_tuples):
-#
-#     my_vertices = my_state[:number_of_vertices]
-#     my_edges = my_state[number_of_vertices:]
-#
-#     turn_count = 0
-#
-#     try:
-#         player_1_vertex = my_vertices.index(1)
-#         turn_count += 1
-#     except ValueError:
-#         player_1_vertex = -1
-#
-#     try:
-#         player_2_vertex = my_vertices.index(2)
-#         turn_count += 1
-#     except ValueError:
-#         player_2_vertex = -1
-#
-#     turn_count += my_edges.count(1) + my_edges.count(2) + my_edges.count(3)
-#
-#     # if turn_count is even, it's player 1 (red)'s turn
-#     current_player_idx = 1 if turn_count % 2 == 0 else 2
-#
-#     erik_edges = [(list_of_edge_tuples[k][0], list_of_edge_tuples[k][1], my_edges[k]) for k in range(len(my_edges))]
-#
-#     game_state = {'num_nodes': number_of_vertices, 'edges': erik_edges,
-#                   'player1_id': 'player1', 'player2_id': 'player2', 'turn_count': turn_count,
-#                   'current_player_index': current_player_idx,
-#                   'player1_node': player_1_vertex, 'player2_node': player_2_vertex}
-#
-#     return game_state
-
-
-# todo change this to the visualize_and_enumerate code
-
 def generate_all_tangled_terminal_states(graph_number):
     # this loads or generates all possible terminal game states for the graph indexed by graph_number and groups them
     # into lists where each member of the list is connected by an automorphism. Running this function requires either
-    # loading or generating an automorphism file.The dictionary game_states has as its key a string with the canonical
+    # loading or generating an automorphism file. The dictionary game_states has as its key a string with the canonical
     # member of each of these, with the further ['automorphisms'] key being a list of all the states that are symmetries
     # of the canonical key. The key ['game_state'] is the representation of the key as a game_state object.
     #
     # Note that this requires enumerating all possible terminal states, the number of which is
     # (vertex_count choose 2) * 2 * 3**edge_count, which grows exponentially with edge count. You can do this easily
     # for graph_number 1, 2, 3, 4, but 5 and up get stupidly large.
+    #
+    # graph_number 2 should have 27 keys, and each ['automorphisms'] sub-key should have 6 entries
+    # graph_number 3 should have 405 keys, and each ['automorphisms'] sub-key should have 12-24 entries (the reason
+    # why there aren't always 24 is that for some of these keys different automorphisms bring you to the same state)
 
     graph = GraphProperties(graph_number)
+
     script_dir = os.path.dirname(os.path.abspath(__file__))  # Get the directory of the current script
     data_dir = os.path.join(script_dir, '..', 'data')
+    list_of_automorphisms = get_automorphisms(graph_number, data_dir=data_dir)
+
     file_path = os.path.join(data_dir, "graph_" + str(graph_number) + "_unique_terminal_states.pkl")
 
     if os.path.isfile(file_path):   # if the file already exists, just load it
@@ -71,12 +42,10 @@ def generate_all_tangled_terminal_states(graph_number):
         # add check to make sure you don't ask for something too large
         print('***************************')
         user_input = input('There are ' + str(math.comb(graph.vertex_count, 2) * 2 * 3**graph.edge_count) +
-                           ' terminal states -- proceed (y/n)?')
+                           ' total non-unique terminal states -- proceed (y/n)?')
         if user_input.lower() != 'y':
             sys.exit(print('exiting...'))
         print('***************************')
-
-        list_of_automorphisms = get_automorphisms(graph_number, data_dir=data_dir)
 
         possible_vertex_states = []
         for positions in itertools.permutations(range(graph.vertex_count), 2):
@@ -90,65 +59,76 @@ def generate_all_tangled_terminal_states(graph_number):
         elements = [1, 2, 3]
         possible_edge_states = list(itertools.product(elements, repeat=graph.edge_count))
 
+        # all_states is a list of lists enumerating ALL the game states
         all_states = [j + list(k) for k in possible_edge_states for j in possible_vertex_states]
 
-        same_group_of_states = {}
+        # this next part creates a dictionary where the keys are each of the elements of all_states and the values are
+        # lists of all the states connected to the key by an automorphism. Note that different automorphisms can lead
+        # to the same state, so at some point the list is converted to a set and then back to a list
 
+        all_states_with_symmetries = {}
+        all_states_no_symmetries = {}
+
+        # iterate over all enumerated states
         for state in all_states:
+
+            # create a list for all the symmetric states
+            list_of_states_connected_by_symmetry = []
+
+            # get indices of the red and blue vertices
             only_vertices = state[:graph.vertex_count]
             red_vertex_index = only_vertices.index(1)
             blue_vertex_index = only_vertices.index(2)
-            same_group_of_states[str(state)] = []
+
+            # iterate over all automorphisms
             for automorph in list_of_automorphisms:
-                new_red_vertex_index = automorph[red_vertex_index]
-                new_blue_vertex_index = automorph[blue_vertex_index]
-                transformed_each = [0] * graph.vertex_count
-                transformed_each[new_red_vertex_index] = 1
-                transformed_each[new_blue_vertex_index] = 2
 
-                edge = np.zeros((graph.vertex_count, graph.vertex_count))
-                new_edge = np.zeros((graph.vertex_count, graph.vertex_count))
-                cnt = graph.vertex_count
-                for j in range(graph.vertex_count):
-                    for i in range(j):
-                        edge[i, j] = state[cnt]
-                        cnt += 1
+                # initialize the state we want to compute (transforming state under automorph)
+                state_transformed_under_automorph = [0] * graph.vertex_count
 
-                cnt = graph.vertex_count
-                for j in range(graph.vertex_count):
-                    for i in range(j):
-                        if automorph[i] < automorph[j]:
-                            new_edge[i, j] = edge[automorph[i], automorph[j]]
-                        else:
-                            new_edge[i, j] = edge[automorph[j], automorph[i]]
-                        cnt += 1
+                # write transformed vertices into the transformed state -- this finishes the vertex part
+                state_transformed_under_automorph[automorph[red_vertex_index]] = 1
+                state_transformed_under_automorph[automorph[blue_vertex_index]] = 2
 
-                for j in range(graph.vertex_count):
-                    for i in range(j):
-                        transformed_each.append(int(new_edge[i, j]))
-                same_group_of_states[str(state)].append(transformed_each)
+                # now we want to transform the edges under the automorphism
+                for edge_idx in range(graph.edge_count):
+                    first_vertex = automorph[graph.edge_list[edge_idx][0]]
+                    second_vertex = automorph[graph.edge_list[edge_idx][1]]
+                    if first_vertex < second_vertex:
+                        transformed_edge = (first_vertex, second_vertex)
+                    else:
+                        transformed_edge = (second_vertex, first_vertex)
 
-        good_states = {}
-        cnt = 0
-        for k, v in same_group_of_states.items():
-            if not cnt % (math.comb(graph.vertex_count, 2) * 2):  # 4 choose 2 = 6 * 2 = 12  ..... 3 choose 2 = 3 *2 = 6   math.comb(graph.vertex_count, 2) * 2
-                good_states[k] = v
-            cnt += 1
+                    transformed_edge_idx = graph.edge_list.index(transformed_edge)
 
-        terminal_states = []
-        for k, v in good_states.items():
-            terminal_states.append(ast.literal_eval(k))
+                    state_transformed_under_automorph.append(state[graph.vertex_count + transformed_edge_idx])
 
-        print('there are', len(terminal_states), 'unique terminal states. Writing to disk ...')
+                list_of_states_connected_by_symmetry.append(str(state_transformed_under_automorph))
+
+            # remove duplicates
+            all_states_with_symmetries[str(state)] = list(dict.fromkeys(list_of_states_connected_by_symmetry))
+            all_states_no_symmetries[str(state)] = list_of_states_connected_by_symmetry
+
+        sorted_all_states_with_symmetries = dict(sorted(all_states_with_symmetries.items()))
+
+        uniques = []
+        duplicates = []
+
+        for k, v in sorted_all_states_with_symmetries.items():
+            if k not in duplicates:
+                uniques.append(k)
+            for j in range(1, len(v)):
+                duplicates.append(v[j])
+
+        unique_terminal_states = [ast.literal_eval(k) for k in uniques]
+        print('there are', len(unique_terminal_states), 'unique terminal states. Writing to disk ...')
 
         game_states = {}
 
-        for my_game_state in terminal_states:
+        for my_game_state in unique_terminal_states:
             game_states[str(my_game_state)] = {}
             game_states[str(my_game_state)]['game_state'] = convert_my_game_state_to_erik_game_state(my_game_state, graph.vertex_count, graph.edge_list)
-            game_states[str(my_game_state)]['automorphisms'] = good_states[str(my_game_state)]
-
-        data_dir = os.path.join(os.getcwd(), '..', 'data')
+            game_states[str(my_game_state)]['automorphisms'] = all_states_with_symmetries[str(my_game_state)]
 
         with open(os.path.join(data_dir, "graph_" + str(graph_number) + "_unique_terminal_states.pkl"), "wb") as fp:
             pickle.dump(game_states, fp)
@@ -161,7 +141,7 @@ def main():
     # this generates all terminal states for graphs 2 and 3
     gs2 = generate_all_tangled_terminal_states(graph_number=2)
     gs3 = generate_all_tangled_terminal_states(graph_number=3)
-    print()
+
 
 if __name__ == "__main__":
     sys.exit(main())
