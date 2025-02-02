@@ -2,8 +2,8 @@
 import sys
 
 # A Tangled game graph is specified by a graph number, which label specific graphs included here. In this module there
-# are 10 included graphs numbered 1 through 10. Each graph requires specification of vertex count (how many vertices
-# the graph has) and an explicit edge list, which are included for these ten graphs. If you'd like to add a new graph,
+# are 11 included graphs numbered 1 through 11. Each graph requires specification of vertex count (how many vertices
+# the graph has) and an explicit edge list, which are included for these 11 graphs. If you'd like to add a new graph,
 # it's simple -- just add it to the GraphProperties class.
 
 
@@ -157,6 +157,12 @@ class GraphProperties(object):
                               (23, 33), (23, 41), (23, 35), (23, 43), (23, 37), (23, 45), (23, 39), (23, 47),
                               (24, 25), (26, 27), (28, 29), (30, 31), (32, 33), (34, 35), (36, 37), (38, 39), (40, 41), (42, 43), (44, 45), (46, 47)]
 
+        elif graph_number == 11:
+            # minimal graph for testing; 3 vertices 2 edges
+            self.vertex_count = 3
+
+            self.edge_list = [(0, 1), (1, 2)]
+
         else:
 
             print('Bad graph_number in GraphProperties initialization -- no graph corresponding to your choice exists.')
@@ -166,7 +172,7 @@ class GraphProperties(object):
 
 def main():
     # this is a debugging tool to make sure everything looks right!
-    for graph_number in range(1, 11):
+    for graph_number in range(1, 12):
         g = GraphProperties(graph_number=graph_number)
         print('****')
         print('graph', graph_number, 'has', g.vertex_count, 'vertices and', g.edge_count, 'edges.')
