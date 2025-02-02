@@ -11,7 +11,7 @@ class SimulatedAnnealingAdjudicator(Adjudicator):
     def __init__(self) -> None:
         """Initialize the adjudicator with default values."""
         super().__init__()
-        self.num_reads: int = 1000
+        self.num_reads: int = 10000
         self.num_sweeps: int = 16
         self.beta_max: float = 3.0
         
