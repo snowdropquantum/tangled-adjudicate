@@ -11,10 +11,11 @@ class SimulatedAnnealingAdjudicator(Adjudicator):
     def __init__(self) -> None:
         """Initialize the adjudicator with default values."""
         super().__init__()
-        self.num_reads: int = 10000
+        self.sampler = neal.SimulatedAnnealingSampler()
+        self.num_reads: int = 1000
         self.num_sweeps: int = 16
         self.beta_max: float = 3.0
-        
+
     def setup(self, **kwargs) -> None:
         """Configure the simulated annealing parameters.
         
@@ -40,7 +41,7 @@ class SimulatedAnnealingAdjudicator(Adjudicator):
             if not isinstance(kwargs['beta_max'], (int, float)) or kwargs['beta_max'] <= 0:
                 raise ValueError("beta_max must be a positive number")
             self.beta_max = float(kwargs['beta_max'])
-            
+
         self._parameters = {
             'num_reads': self.num_reads,
             'num_sweeps': self.num_sweeps,
@@ -63,7 +64,7 @@ class SimulatedAnnealingAdjudicator(Adjudicator):
         
         # Convert game state to Ising model
         ising_model = self._game_state_to_ising(game_state)
-        sampler = neal.SimulatedAnnealingSampler()
+        # sampler = neal.SimulatedAnnealingSampler()
         
         # Calculate beta range based on coupling strengths
         beta_range = [
@@ -72,7 +73,7 @@ class SimulatedAnnealingAdjudicator(Adjudicator):
         ]
         
         # Perform simulated annealing
-        response = sampler.sample_ising(
+        response = self.sampler.sample_ising(
             ising_model['h'],
             ising_model['j'],
             beta_range=beta_range,
