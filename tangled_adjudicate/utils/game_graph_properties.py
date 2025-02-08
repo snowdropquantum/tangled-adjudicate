@@ -2,15 +2,15 @@
 import sys
 
 # A Tangled game graph is specified by a graph number, which label specific graphs included here. In this module there
-# are 11 included graphs numbered 1 through 11. Each graph requires specification of vertex count (how many vertices
+# are 12 included graphs numbered 1 through 12. Each graph requires specification of vertex count (how many vertices
 # the graph has) and an explicit edge list, which are included for these 11 graphs. If you'd like to add a new graph,
 # it's simple -- just add it to the GraphProperties class.
 
 
 class GraphProperties(object):
     def __init__(self, graph_number):
-        # graph_number is an integer, currently in the range 1 to 10, that labels which graph we are using.
-        # to add a new graph, simply define a new graph_number (say 11) and provide its vertex_count and edge_list
+        # graph_number is an integer, currently in the range 1 to 12, that labels which graph we are using.
+        # to add a new graph, simply define a new graph_number (say 13) and provide its vertex_count and edge_list
         # following the pattern here.
 
         if graph_number == 1:
@@ -162,6 +162,17 @@ class GraphProperties(object):
             self.vertex_count = 3
 
             self.edge_list = [(0, 1), (1, 2)]
+
+        elif graph_number == 12:
+            # moser spindle; smaller than petersen graph, only 8 automorphisms; 7 vertices, 11 edges
+            self.vertex_count = 7
+
+            self.edge_list = [(0, 1), (0, 2), (0, 3),
+                              (1, 4), (1, 5),
+                              (2, 4), (2, 6),
+                              (3, 5), (3, 6),
+                              (4, 6),
+                              (5, 6)]
 
         else:
 
