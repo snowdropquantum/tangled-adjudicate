@@ -5,17 +5,14 @@ description = "Tangled adjudicators"
 authors = ["Geordie Rose <geordie@snowdropquantum.com>"]
 license = "MIT"
 homepage = "https://www.snowdropquantum.com/"
-packages = [
-    { include = "tangled_adjudicate" },
-    { include = "tests" },
-]
+packages = [{ include = "tangled_adjudicate" }, { include = "tests" }]
 
 [tool.poetry.dependencies]
-python = "^3.8"  # You may want to adjust this based on your needs
-dwave-ocean-sdk = "*"
-dwave-neal = ">=0.6.0"
-matplotlib = "*"
-gdown = "*"
+python = "^3.12"          # You may want to adjust this based on your needs
+dwave-ocean-sdk = "6.7.1"
+dwave-neal = "0.6.0"
+matplotlib = "3.10.1"
+gdown = "5.2.0"
 
 [tool.poetry.group.dev.dependencies]
 # Add development dependencies here if needed
@@ -24,4 +21,3 @@ gdown = "*"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
