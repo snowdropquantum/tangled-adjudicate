@@ -4,6 +4,9 @@ import numpy as np
 from scipy import sparse
 from scipy.linalg import eigh, eig
 from scipy.sparse.linalg import eigsh
+import importlib.resources
+import importlib.util
+import pathlib
 
 
 def create_2d_pauli_matrices(verbose=False):
@@ -76,7 +79,19 @@ def create_pauli_matrices_for_full_size_hamiltonian(n_qubits, verbose=False):
 def load_schedule_data(file_path=None, verbose=False):
     # data is a numpy array
     if file_path is None:
-        file_path = os.path.join(os.getcwd(), '..', 'schrodinger', 'new_schedule.txt')
+        # Get the path to the schedule file using package resources
+        try:
+            # For Python 3.9+
+            with importlib.resources.files('tangled_adjudicate.schrodinger').joinpath('new_schedule.txt').open('r') as f:
+                file_path = str(importlib.resources.files('tangled_adjudicate.schrodinger').joinpath('new_schedule.txt'))
+        except (ImportError, AttributeError):
+            # Fallback for older Python versions
+            package_path = pathlib.Path(importlib.util.find_spec('tangled_adjudicate').origin).parent
+            file_path = os.path.join(package_path, 'schrodinger', 'new_schedule.txt')
+            
+        if verbose:
+            print(f"Using schedule file: {file_path}")
+            
     data = np.loadtxt(file_path)       # Import SR8 qubit information
 
     # these are both 1001 dimensional row vectors
