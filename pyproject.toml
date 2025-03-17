@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tangled-adjudicate"
-version = "0.0.1"
+version = "0.0.2"
 description = "Tangled adjudicators"
 authors = ["Geordie Rose <geordie@snowdropquantum.com>"]
 license = "MIT"
