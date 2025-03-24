@@ -12,7 +12,7 @@ class SimulatedAnnealingAdjudicator(Adjudicator):
         """Initialize the adjudicator with default values."""
         super().__init__()
         self.sampler = neal.SimulatedAnnealingSampler()
-        self.num_reads: int = 10000
+        self.num_reads: int = 100000
         self.num_sweeps: int = 16
         self.beta_max: float = 3.0
 
@@ -61,7 +61,9 @@ class SimulatedAnnealingAdjudicator(Adjudicator):
             ValueError: If the game state is invalid
         """
         self._validate_game_state(game_state)
-        
+        # this is just so that the data structure returned stores correct number, as this could have been changed
+        self._parameters['num_reads'] = self.num_reads
+
         # Convert game state to Ising model
         ising_model = self._game_state_to_ising(game_state)
         # sampler = neal.SimulatedAnnealingSampler()
