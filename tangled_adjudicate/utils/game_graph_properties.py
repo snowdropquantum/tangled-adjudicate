@@ -278,6 +278,30 @@ class GraphProperties(object):
                               (199, 203), (199, 204), (200, 202), (201, 202), (201, 204), (202, 209), (203, 207),
                               (204, 205), (205, 206), (205, 208), (206, 207), (207, 209)]
 
+        elif graph_number == 17:
+            # cube graph; 8 vertices, 12 edges
+
+            self.vertex_count = 8
+
+            self.edge_list = [(0, 1), (0, 2), (0, 4),
+                              (1, 3), (1, 5),
+                              (2, 3), (2, 6),
+                              (3, 7),
+                              (4, 5), (4, 6),
+                              (5, 7),
+                              (6, 7)]
+
+        elif graph_number == 18:
+            # 3-prism graph; 6 vertices, 9 edges
+
+            self.vertex_count = 6
+
+            self.edge_list = [(0, 1), (0, 2), (0, 3),
+                              (1, 2), (1, 4),
+                              (2, 5),
+                              (3, 4), (3, 5),
+                              (4, 5)]
+
         else:
 
             print('Bad graph_number in GraphProperties initialization -- no graph corresponding to your choice exists.')
