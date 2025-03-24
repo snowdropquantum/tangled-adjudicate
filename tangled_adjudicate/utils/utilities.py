@@ -1,4 +1,5 @@
 """ a place to put utility functions """
+import ast
 import gdown
 
 
@@ -40,6 +41,9 @@ def convert_erik_game_state_to_my_game_state(game_state):
 
 def convert_my_game_state_to_erik_game_state(my_state, number_of_vertices, list_of_edge_tuples):
     # extract erik state from geordie state
+    if isinstance(my_state, str):
+        my_state = ast.literal_eval(my_state)
+
     my_vertices = my_state[:number_of_vertices]
     my_edges = my_state[number_of_vertices:]
 
