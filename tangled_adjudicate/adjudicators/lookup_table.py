@@ -32,9 +32,9 @@ class LookupTableAdjudicator(Adjudicator):
         if 'data_dir' in kwargs:
             if not isinstance(kwargs['data_dir'], str):
                 raise ValueError("data_dir must be a string")
-            if not os.path.isdir(kwargs['data_dir']):
-                raise ValueError(f"Directory not found: {kwargs['data_dir']}")
             self.data_dir = kwargs['data_dir']
+            # Make the data directory if it doesn't exist
+            os.makedirs(self.data_dir, exist_ok=True)
             
         self._parameters = {'data_dir': self.data_dir}
         
