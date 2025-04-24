@@ -4,8 +4,8 @@ import pytest
 import traceback
 from typing import Dict, List, Tuple, Optional
 
-from tangled_game_engine.tangled_game.game import Game
-from tangled_game_engine.tangled_game.game_types import Edge, Vertex
+from snowdrop_tangled_game_engine.tangled_game.game import Game
+from snowdrop_tangled_game_engine.tangled_game.game_types import Edge, Vertex
 
 from tangled_adjudicate.adjudicators.lookup_table import LookupTableAdjudicator
 from tangled_adjudicate.adjudicators.quantum_annealing import QuantumAnnealingAdjudicator
