@@ -11,7 +11,7 @@ class SchrodingerEquationAdjudicator(Adjudicator):
     def __init__(self) -> None:
         """Initialize the adjudicator with default values."""
         super().__init__()
-        self.anneal_time: float = 5.0  # ns
+        self.anneal_time: float = 40.0  # ns
         self.s_min: float = 0.001
         self.s_max: float = 0.999
         
@@ -19,7 +19,7 @@ class SchrodingerEquationAdjudicator(Adjudicator):
         """Configure the Schrödinger equation parameters.
         
         Args:
-            anneal_time: Annealing time in nanoseconds (default: 5.0)
+            anneal_time: Annealing time in nanoseconds (default: 40.0)
             s_min: Minimum annealing parameter (default: 0.001)
             s_max: Maximum annealing parameter (default: 0.999)
             
