@@ -13,6 +13,25 @@ class GraphProperties(object):
         # to add a new graph, simply define a new graph_number (say 17) and provide its vertex_count and edge_list
         # following the pattern here.
 
+        self.vertex_ownership = {2: (0, 1),
+                                 3: (0, 2),
+                                 4: (0, 3),
+                                 5: (5, 7),
+                                 6: (14, 10),
+                                 7: (1, 4),
+                                 8: (0, 11),
+                                 10: (0, 23),
+                                 11: (0, 2),
+                                 12: (2, 4),
+                                 13: (0, 1),
+                                 14: (7, 16),
+                                 15: (1, 4),
+                                 16: (136, 31),
+                                 17: (0, 7),
+                                 18: (0, 4),
+                                 19: (0, 4),
+                                 20: (0, 2)}
+
         if graph_number == 1:
             # K_2, complete graph on 2 vertices, 1 edge
             self.vertex_count = 2
@@ -301,6 +320,21 @@ class GraphProperties(object):
                               (2, 5),
                               (3, 4), (3, 5),
                               (4, 5)]
+
+        elif graph_number == 19:   # barbell graph; 6 vertices, 7 edges
+
+            self.vertex_count = 6
+
+            self.edge_list = [(0, 1), (0, 2),
+                              (1, 2),
+                              (2, 5),
+                              (3, 4), (3, 5),
+                              (4, 5)]
+
+        elif graph_number == 20:   # diamond graph; 4 vertices, 5 edges
+
+            self.vertex_count = 4
+            self.edge_list = [(0, 1), (0, 3), (1, 2), (1, 3), (2, 3)]
 
         else:
 
