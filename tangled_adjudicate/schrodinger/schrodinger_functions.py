@@ -4,6 +4,7 @@ import numpy as np
 from tangled_adjudicate.schrodinger.sparse_matrices import (create_pauli_matrices_for_full_size_hamiltonian,
                                                             load_schedule_data, create_sparse_hamiltonian,
                                                             compute_eigenvalues_and_eigenvectors)
+from tangled_adjudicate.utils.utilities import plot_energies, plot_probabilities, plots_for_paper
 
 
 def initialize_wavefunction(eigenvalues, eigenvectors, n_i, gap_initial):
@@ -50,7 +51,13 @@ def calculate_correlation_matrix(sz, psi):
     return correlation_matrix
 
 
-def evolve_schrodinger(h, jay, s_min, s_max, tf, n_qubits, verbose=False):
+def evolve_schrodinger(h, jay, s_min, s_max, tf, n_qubits, generate_plots=False, verbose=False):
+
+    # todo: it's possible 2 pi tf here is actually t, so tf = 40 ns means t=2*pi*40 ns, ie longer than we want
+
+    ###########
+    # tf /= 2*pi
+    ###########
 
     # tf = real annealing time in nanoseconds
     # s_min = 0.1                           # Initial dimensionless anneal time (s=t/t_f), lower bound 0
@@ -71,9 +78,15 @@ def evolve_schrodinger(h, jay, s_min, s_max, tf, n_qubits, verbose=False):
     gap_initial = 0.001                     # Threshold gap for initialization in superposition
     number_of_levels = 2 ** n_qubits        # max number, can reduce if you want
 
+    # definition of annealing schedules has factor of 2 in Hamiltonian
+    schedule_energy_reduction_factor = 0.5
+
     # load and return (1001,) vectors for delta and big_e for typical D-Wave annealing schedule; if you want to try to
     # exactly match hardware, you will have to use specific data from whatever system you're simulating
     delta_qubit, big_e_qubit = load_schedule_data()
+
+    delta_qubit *= schedule_energy_reduction_factor
+    big_e_qubit *= schedule_energy_reduction_factor
 
     # Identity and Pauli matrices -- sx, sy, sz are dicts with qubit # as key, should be sparse csr format
     sx, sy, sz = create_pauli_matrices_for_full_size_hamiltonian(n_qubits=n_qubits)
@@ -81,6 +94,7 @@ def evolve_schrodinger(h, jay, s_min, s_max, tf, n_qubits, verbose=False):
     s = s_min
     energies = []
     probabilities = []
+    probabilities_in_z_basis = []
     gap_old = 0
     psi = None
     eigenvectors = None
@@ -88,12 +102,12 @@ def evolve_schrodinger(h, jay, s_min, s_max, tf, n_qubits, verbose=False):
     correlation_matrix = np.zeros((n_qubits, n_qubits))   # this is the correlation function we use for gameplay
 
     start = time.time()
-
+    s_list = []
     while s <= s_max:
 
         if verbose:
             print('computing for s = ', s)
-
+        s_list.append(s)
         # eigenenergies and wavefunctions at s
 
         n_s = 1000 * s                      # checked that s=0.3 gives n_low = 300
@@ -128,6 +142,7 @@ def evolve_schrodinger(h, jay, s_min, s_max, tf, n_qubits, verbose=False):
 
         # probability of being in eigenvector N; NOT probabilities of being in the sigma_z basis
         probabilities.append(trunc_prob)    # check P = [P abs(Vn'*psi).^2]
+        probabilities_in_z_basis.append([np.real_if_close(psi[j].conj() * psi[j])[0] for j in range(len(psi))])
         gap = min(eigenvalues[1:n_adaptive]-eigenvalues[0: n_adaptive - 1])
 
         # Determining the integration step based on the gap size
@@ -140,12 +155,23 @@ def evolve_schrodinger(h, jay, s_min, s_max, tf, n_qubits, verbose=False):
             s = s_max
         gap_old = gap
 
+    diagonal_elements = np.diag(big_h.toarray())
+    sorted_indices = np.argsort(diagonal_elements)
+
     if verbose:
         print('This function call took', time.time() - start, 'seconds.')
 
     final_eigenvalues = energies[-1]      # check
     final_probabilities = probabilities[-1]
     final_eigenvectors = eigenvectors
+
+    if generate_plots:
+
+        graph_number = 19
+        print('generating plot for graph_number', graph_number, 'check this is correct...')
+        # plot_energies(s_list, energies)
+        # plot_probabilities(s_list, probabilities_in_z_basis)
+        plots_for_paper(graph_number, s_list, energies, probabilities_in_z_basis, sorted_indices)
 
     if verbose:
         print('final correlation matrix:')
