@@ -12,7 +12,7 @@ class SimulatedAnnealingAdjudicator(Adjudicator):
         """Initialize the adjudicator with default values."""
         super().__init__()
         self.sampler = neal.SimulatedAnnealingSampler()
-        self.num_reads: int = 100000
+        self.num_reads: int = 10000
         self.num_sweeps: int = 16
         self.beta_max: float = 3.0
 
