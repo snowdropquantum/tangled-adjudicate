@@ -76,8 +76,8 @@ def create_pauli_matrices_for_full_size_hamiltonian(n_qubits, verbose=False):
 def load_schedule_data(file_path=None, verbose=False):
     # data is a numpy array
     if file_path is None:
-        file_path = os.path.join(os.getcwd(), '..', 'schrodinger', 'new_schedule.txt')
-    data = np.loadtxt(file_path)       # Import SR8 qubit information
+        file_path = os.path.join(os.getcwd(), '..', 'schrodinger', 'advantage2.1.3.txt')
+    data = np.loadtxt(file_path)       # Import annealing schedule info for QC being used
 
     # these are both 1001 dimensional row vectors
     delta_qubit = data[:, 1] / 2
