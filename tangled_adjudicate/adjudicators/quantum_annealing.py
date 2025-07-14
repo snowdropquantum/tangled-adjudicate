@@ -13,15 +13,15 @@ from .adjudicator import Adjudicator, GameState, AdjudicationResult
 @dataclass
 class QAParameters:
     """Parameters for quantum annealing."""
-    num_reads: int = 1000
-    anneal_time: float = 5.0  # ns
+    num_reads: int = 10000
+    anneal_time: float = 40.0  # ns
     num_chip_runs: int = 1
     use_gauge_transform: bool = False
     use_shim: bool = False
     shim_iterations: int = 1
     alpha_phi: float = 0.1
-    use_mock: bool = True
-    solver_name: str = 'Advantage2_prototype2.6'
+    use_mock: bool = False
+    solver_name: str = 'Advantage2_system1.3'
     graph_number: Optional[int] = None
     data_dir: Optional[str] = None
 
@@ -180,8 +180,13 @@ class QuantumAnnealingAdjudicator(Adjudicator):
         if self.params.use_mock and self.params.use_shim:
             print('D-Wave mock sampler is not set up to use the shimming process, turn shim off if using mock!')
 
+        # here the 'num_reads' parameter is set so that the actual sample count that's returned is what the user set
+        # for num_reads -- we get extra samples from both num_embeddings and self.params.num_chip_runs. For example
+        # if num_embeddings = 343 and self.params.num_chip_runs = 2, and the user asks for self.params.num_reads = 10,000
+        # then the actual 'num_reads' sent to the solver would be int(10000/343/2) = 14. This will return a total of
+        # approximately 10,000 samples.
         sampler_kwargs = {
-                'num_reads': self.params.num_reads,
+                'num_reads': int(self.params.num_reads / num_embeddings / self.params.num_chip_runs),
                 'answer_mode': 'raw'
             }
 
@@ -355,7 +360,9 @@ class QuantumAnnealingAdjudicator(Adjudicator):
         for idx in isolated_vertices:
             total_samples[:, idx] = np.random.choice([1, -1], size=total_samples.shape[0])
 
-        sample_count = self.params.num_reads * num_embeddings * self.params.num_chip_runs
+        # I changed sample count to what should be the actual sample count
+        # sample_count = self.params.num_reads * num_embeddings * self.params.num_chip_runs
+        sample_count = int(self.params.num_reads / num_embeddings / self.params.num_chip_runs) * num_embeddings * self.params.num_chip_runs
 
         # this is a full matrix with zeros on the diagonal that uses all the samples
         correlation_matrix = \
@@ -364,6 +371,9 @@ class QuantumAnnealingAdjudicator(Adjudicator):
 
         # Compute results
         winner, score, influence_vector = self._compute_winner_score_and_influence(game_state, correlation_matrix)
+
+        # add samples to the result returned
+        self._parameters.update({'samples' : total_samples})
 
         return AdjudicationResult(
             game_state=game_state,
