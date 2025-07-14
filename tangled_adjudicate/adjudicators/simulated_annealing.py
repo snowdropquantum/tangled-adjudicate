@@ -20,7 +20,7 @@ class SimulatedAnnealingAdjudicator(Adjudicator):
         """Configure the simulated annealing parameters.
         
         Args:
-            num_reads: Number of annealing reads (default: 1000)
+            num_reads: Number of annealing reads (default: 10000)
             num_sweeps: Number of sweeps per read (default: 16)
             beta_max: Maximum inverse temperature (default: 3.0)
             
