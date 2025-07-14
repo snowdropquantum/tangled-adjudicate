@@ -161,7 +161,7 @@ def get_embeddings(source_graph_number, qc_solver_to_use, data_dir):
 
     # these parameters seem to work well to get a lot of embeddings, you can try to change them if you want
     raster_breadth = 2
-    grid_size = 6
+    grid_size = 12
 
     file_name = ('embeddings_graph_number_' + str(source_graph_number) + '_raster_breadth_' + str(raster_breadth) +
                  '_gridsize_' + str(grid_size) + '_qc_' + qc_solver_to_use + '.pkl')
