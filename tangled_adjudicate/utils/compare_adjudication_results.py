@@ -2,129 +2,105 @@
 import sys
 import os
 import pickle
-import matplotlib.pyplot as plt
 from itertools import combinations
+from collections import defaultdict
+
+from tangled_adjudicate.utils.utilities import evaluate_winner, load_lookup_table
+from tangled_adjudicate.utils.game_graph_properties import GraphProperties
 
 
-def compare_adjudication_results(graph_number, solvers_to_use):
-    # solvers_to_use is a list of solvers of length 2, 3, or 4 comprising 2, 3, or 4 of
-    # ['schrodinger_equation', 'simulated_annealing', 'quantum_annealing', 'lookup_table']
+def compare_adjudication_results(graph_number, solvers_to_use, lookup_table_solvers_to_use, epsilon, anneal_time, num_reads):
+    # this compares results from a set of solvers + parameters
+    # solvers_to_use is a list of solvers in ['schrodinger_equation', 'simulated_annealing', 'quantum_annealing', 'lookup_table']
+    # lookup_table_solvers_to_use is a list of solvers whose lookup tables you want to use
 
-    # load adjudication results obtained from running /utils/adjudicate_all_terminal_states.py
+    graph = GraphProperties(graph_number)
+
     data_dir = os.path.join(os.getcwd(), '..', 'data')
-    file_name = "graph_" + str(graph_number) + "_terminal_states_adjudication_results.pkl"
+    raw_file_path = os.path.join(data_dir,
+                                 "graph_" + str(graph_number) + "_adjudicated_unique_terminal_states_for_paper.pkl")
 
-    with open(os.path.join(data_dir, file_name), "rb") as fp:
-        adjudication_results = pickle.load(fp)
+    try:
+        with open(raw_file_path, 'rb') as fp:
+            raw_adjudication_data = pickle.load(fp)
+    except Exception as e:
+        raise RuntimeError(f"Failed to load raw adjudication data: {str(e)}")
 
-    # check to make sure the entries in solvers_to_use have adjudication results already
-    for each in solvers_to_use:
-        if each not in adjudication_results:
-            sys.exit(print('no adjudication results found for solver ' +
-                           each + '. Run adjudicate_all_terminal_states.py using this solver first.'))
+    results = defaultdict(lambda: defaultdict(dict))
 
-    # OK so we now have some adjudication results to compare. For each canonical terminal state we will generate a
-    # list with three booleans, corresponding to 1v2, 1v3, 2v3 respectively. The boolean is True if the pair agree and
-    # False if they don't.
+    for solver in solvers_to_use:
+        if solver == 'simulated_annealing':
+            for k, v in raw_adjudication_data['fixed']['simulated_annealing'][num_reads['simulated_annealing']].items():
+                results[k][solver] = [v['score'], evaluate_winner(v['score'], epsilon=epsilon)]
+        if solver == 'schrodinger_equation':
+            for k, v in raw_adjudication_data['fixed']['schrodinger_equation'][anneal_time['schrodinger_equation']].items():
+                results[k][solver] = [v['score'], evaluate_winner(v['score'], epsilon=epsilon)]
+        if solver == 'quantum_annealing':
+            for k, v in raw_adjudication_data['fixed']['quantum_annealing'][num_reads['quantum_annealing']][anneal_time['quantum_annealing']].items():
+                results[k][solver] = [v['score'], evaluate_winner(v['score'], epsilon=epsilon)]
+        if solver == 'lookup_table':
+            for each in lookup_table_solvers_to_use:
+                lookup_table = load_lookup_table(data_dir, graph_number, each, epsilon, anneal_time[each], num_reads[each])
+                for k, v in lookup_table.items():
+                    results[k][solver][each] = [None, v]
 
-    # initialize game_result dict, load in results from the different solvers requested
-    game_result = {}  # this is a dict whose keys are the canonical terminal states
-    scores = {}     # holds the scores for all the terminal states in a list
+    cnt = 0
+    current_biggest_score_difference = 0
+    big_key = None
+    big_max_index = None
+    big_min_index = None
+    pos_val = None
+    neg_val = None
 
-    for k0, value_dict in adjudication_results.items():   # k0 is the solver name string
-        for k1, v in value_dict.items():   # k1 is the game state string
-            game_result[k1] = []
-    for each in solvers_to_use:
-        scores[each] = []
+    for k, v in results.items():   # key is '[1, 0, 2, 1, 1]'
+        # Only look at the ones where 1 is at red's position and 2 is at blue's position,
+        # not the reversed ones which are only used for lookup table + alphazero
+        vertices = ''.join(k.strip('[]').split(', ')[:graph.vertex_count])
+        pos_1 = vertices.find('1')
+        pos_2 = vertices.find('2')
+        if pos_1 == graph.vertex_ownership[graph_number][0] and pos_2 == graph.vertex_ownership[graph_number][1]:
+            list_of_results = []
+            scores = []
+            for solver in solvers_to_use:
+                if solver == 'lookup_table':
+                    for lut_solver in lookup_table_solvers_to_use:
+                        list_of_results.append(v[solver][lut_solver][1])
+                else:
+                    list_of_results.append(v[solver][1])
+                    scores.append(v[solver][0])
+            if len(set(list_of_results)) > 1:
+                print('key ', k, 'has a mismatch; values are ', list_of_results)
+                cnt += 1
 
-    for k0, value_dict in adjudication_results.items():  # k will be solver name string
-        if k0 in solvers_to_use:   # if we want to add this, add it
-            for k1, v in value_dict.items():
-                game_result[k1].append([k0, v['winner'], v['score']])   # score will be None for lookup_table
+            most_positive = max(scores)
+            most_negative = min(scores)
+            biggest_score_difference = most_positive - most_negative
 
-    comparisons = {}
-    for k, v in game_result.items():    # k is game state string
-        comparisons[k] = []
-        for a, b in combinations(v, 2):
-            comparisons[k].append(a[1] == b[1])
+            if biggest_score_difference > current_biggest_score_difference:
+                big_key = k
+                current_biggest_score_difference = biggest_score_difference
+                neg_val = most_negative
+                pos_val = most_positive
+                big_max_index = scores.index(most_positive)
+                big_min_index = scores.index(most_negative)
 
-    for k, v in comparisons.items():
-        if False in v:
-            print('key ', k, 'has a mismatch!')
-
-    for k, v in game_result.items():
-        for each in v:
-            scores[each[0]].append(each[2])
-
-    to_plot = []
-    for k, v in scores.items():
-        if v[0] is not None:
-            to_plot.append(v)
-
-    if 'lookup_table' in solvers_to_use:
-        solvers_to_use.remove('lookup_table')
-
-    if len(solvers_to_use) < 2:
-        print('need at least two of SA, QA, SE to generate score comparisons... lookup_table does not generate scores!')
-
-    red_text = solvers_to_use[0] + ': red'
-    blue_text = solvers_to_use[1] + ': blue'
-    cyan_text = None
-
-    if len(solvers_to_use) == 3:
-        cyan_text = solvers_to_use[2] + ': cyan'
-
-    if graph_number == 2:
-
-        if len(to_plot) == 2:
-            plt.hist(to_plot, range=[-2, 2], bins=200, color=['red', 'blue'], stacked=True)
-        else:
-            plt.hist(to_plot, range=[-2, 2], bins=200, color=['red', 'blue', 'cyan'], stacked=True)
-
-        plt.text(1, 20, r'Three Vertex Graph', fontsize=12)
-        plt.text(1, 18, red_text, fontsize=8)
-        plt.text(1, 17, blue_text, fontsize=8)
-        if len(solvers_to_use) == 3:
-            plt.text(1, 16, cyan_text, fontsize=8)
-
-        plt.ylim(0, 26)
-
-        plt.xlabel('Score')
-        plt.ylabel('Terminal State Count')
-
-        plt.vlines(x=0.5, ymin=0, ymax=20, colors='green', ls=':', lw=1)
-        plt.vlines(x=-0.5, ymin=0, ymax=20, colors='green', ls=':', lw=1)
-
-    if graph_number == 3:
-
-        if len(to_plot) == 2:
-            plt.hist(to_plot, range=[-4, 4], bins=800, color=['red', 'blue'], stacked=True)
-        else:
-            plt.hist(to_plot, range=[-4, 4], bins=800, color=['red', 'blue', 'cyan'], stacked=True)
-
-        plt.text(2.5, 70, r'Four Vertex Graph', fontsize=12)
-        plt.text(2.5, 65, red_text, fontsize=8)
-        plt.text(2.5, 61, blue_text, fontsize=8)
-        if len(solvers_to_use) == 3:
-            plt.text(2.5, 57, cyan_text, fontsize=8)
-        plt.ylim(0, 100)
-
-        plt.xlabel('Score')
-        plt.ylabel('Terminal State Count')
-
-        plt.vlines(x=0.5, ymin=0, ymax=70, colors='green', ls=':', lw=1)
-        plt.vlines(x=-0.5, ymin=0, ymax=70, colors='green', ls=':', lw=1)
-
-    plt.show()
+    print('total adjudication mismatches:', cnt)
+    print('key with biggest mismatch:', big_key)
+    print('biggest score mismatch:', current_biggest_score_difference)
+    print('solvers:', solvers_to_use[big_max_index], solvers_to_use[big_min_index])
+    print('respective scores:', pos_val, neg_val)
 
 
 def main():
 
+    graph_number = 19   # 11 is P_3, 2 is K_3, 20 is diamond graph, 19 is barbell graph
     solvers_to_use = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing', 'lookup_table']
-    compare_adjudication_results(graph_number=2, solvers_to_use=solvers_to_use)
+    lookup_table_solvers_to_use = ['simulated_annealing', 'schrodinger_equation', 'quantum_annealing']
+    epsilon = 0.25   # 0.25 for 19, 0.5 for the rest
+    anneal_time = {'quantum_annealing': 350, 'schrodinger_equation': 40, 'simulated_annealing': None}
+    num_reads = {'quantum_annealing': 100000, 'schrodinger_equation': None, 'simulated_annealing': 100000}
 
-    solvers_to_use = ['simulated_annealing', 'quantum_annealing', 'lookup_table']
-    compare_adjudication_results(graph_number=3, solvers_to_use=solvers_to_use)
+    compare_adjudication_results(graph_number, solvers_to_use, lookup_table_solvers_to_use, epsilon, anneal_time, num_reads)
 
 
 if __name__ == "__main__":
