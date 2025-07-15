@@ -3,7 +3,6 @@ from typing import Dict, Any, List, Optional
 import numpy as np
 from dataclasses import dataclass
 from dwave.system import DWaveSampler, FixedEmbeddingComposite
-from dwave.system.testing import MockDWaveSampler
 
 from ..utils.find_graph_automorphisms import get_automorphisms
 from ..utils.find_hardware_embeddings import get_embeddings
@@ -14,7 +13,7 @@ from .adjudicator import Adjudicator, GameState, AdjudicationResult
 class QAParameters:
     """Parameters for quantum annealing."""
     num_reads: int = 10000
-    anneal_time: float = 40.0  # ns
+    anneal_time: int = 40  # ns
     num_chip_runs: int = 1
     use_gauge_transform: bool = False
     use_shim: bool = False
@@ -60,9 +59,7 @@ class QuantumAnnealingAdjudicator(Adjudicator):
         for key, value in kwargs.items():
             if hasattr(self.params, key):
                 setattr(self.params, key, value)
-            else:
-                raise ValueError(f"Unknown parameter: {key}")
-        
+
         # Validate parameters
         if self.params.num_reads <= 0:
             raise ValueError("num_reads must be positive")
@@ -89,14 +86,8 @@ class QuantumAnnealingAdjudicator(Adjudicator):
             
         # Initialize sampler
         try:
-            if self.params.use_mock:
-                base_sampler = MockDWaveSampler(topology_type='zephyr', topology_shape=[6, 4])
-            else:
-                base_sampler = DWaveSampler(solver=self.params.solver_name)
-                
-            # Store for later use in adjudicate
-            self._base_sampler = base_sampler
-            
+            base_sampler = DWaveSampler(solver=self.params.solver_name)
+            self._base_sampler = base_sampler   # Store for later use in adjudicate
         except Exception as e:
             raise RuntimeError(f"Failed to initialize D-Wave sampler: {str(e)}")
 
