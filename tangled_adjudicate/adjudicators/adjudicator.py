@@ -3,6 +3,8 @@ from typing import Any, TypedDict, List, Tuple, Optional, Dict, Union, Set
 import numpy as np
 import numpy.typing as npt
 
+from tangled_adjudicate.utils.utilities import evaluate_winner
+
 
 class GameState(TypedDict):
     num_nodes: int
@@ -130,12 +132,7 @@ class Adjudicator(ABC):
             return None, None, influence_vector
             
         score = influence_vector[game_state['player1_node']] - influence_vector[game_state['player2_node']]
-        
-        if score > epsilon:
-            winner = 'red'
-        elif score < -epsilon:
-            winner = 'blue'
-        else:
-            winner = 'draw'
+
+        winner = evaluate_winner(score, epsilon)
             
         return winner, score, influence_vector
