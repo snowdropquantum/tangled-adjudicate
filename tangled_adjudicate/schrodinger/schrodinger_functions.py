@@ -4,7 +4,7 @@ import numpy as np
 from tangled_adjudicate.schrodinger.sparse_matrices import (create_pauli_matrices_for_full_size_hamiltonian,
                                                             load_schedule_data, create_sparse_hamiltonian,
                                                             compute_eigenvalues_and_eigenvectors)
-from tangled_adjudicate.utils.utilities import plot_energies, plot_probabilities, plots_for_paper
+from tangled_adjudicate.utils.utilities import plots_for_paper
 
 
 def initialize_wavefunction(eigenvalues, eigenvectors, n_i, gap_initial):
